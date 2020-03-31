@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <title>Issue certificate</title>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+​<script>
+  $(document).ready(function(){
+    var eid=window.prompt("Enter your employee id: ");
+    $.post("http://54.251.138.1:9305/api/dapps/338bad04fc5afdffcdb98c00f6c1ecfbbe53af615bce1da4eaf14c23a331ba06/employeeData/",{empid:eid},function(data){
+      if(data.empID===eid )
+      {
+        document.getElementById("txtemail").setAttribute("value",data.email);
+        document.getElementById("txtempid").setAttribute("value",data.empID);
+        document.getElementById("txtname").setAttribute("value",data.name);
+        document.getElementById("txtdesignation").setAttribute("value",data.designation);
+        document.getElementById("txtactualsalary").setAttribute("value",data.salary);
+      }
+      else
+      {
+        alert("Employee does not exists");
+      }
+  });
+  function getPublicKey(x){
+    $.post("https://node1.belrium.io/api/accounts/open",
+      {secret:x,countryCode:"IN"},
+      function(data){
+        if(data.isSuccess===true)
+        {
+          return data.publicKey;
+        }
+        else
+        {
+          return 0;
+        }
+        });
+  }
+
+  function preprocessing(obj){
+    var s = "[";
+    for(i in obj){
+      s += "\"" + obj[i] + "\"" + ",";
+    }
+    s = s.substring(0,s.length - 1)
+    s += "]";
+    return s;
+  } 
+
+  function calcGrossSalary(basicPay,hra,lta,ma){
+    return parseInt(basicPay) + parseInt(hra) + parseInt(lta) + parseInt(ma);
+    }
+
+  function calcTotalDeductions(providentFund,professionalTax){
+    return parseInt(providentFund) + parseInt(professionalTax);
+  }  
+
+  function calcNetSalary(gross, totalDed){
+    return gross - totalDed;
+  }
+
+  //var email, empid, name, employer, month, year, designation, bank, accountNumber, pan;
+  //var basicPay, hra, lta, ma, providentFund, professionalTax, grossSalary, totalDeductions;
+  //var netSalary, secret;
+  //transaction call
+  $("#issuecert").click(function(){  
+    var secret=window.prompt("Enter Secret: ");
+    var basicPay=$("#txtactualsalary").val();
+    var hra=$("#txthra").val();
+    var lta=$("#txtlta").val();
+    var ma=$("#txtma").val();
+    var providentFund=$("#txtpf").val();
+    var professionalTax=$("#txtpt").val();
+    var grossSalary=calcGrossSalary(basicPay,hra,lta,ma);
+    var totalDeductions=calcTotalDeductions(providentFund,professionalTax);
+    var netSalary=calcNetSalary(grossSalary, totalDeductions);
+
+    var paras={
+        email:$("#txtemail").val(),
+        empid:$("#txtempid").val(),
+        name:$("#txtname").val(),
+        employer:$("#txtemployer").val(),
+        month:$("#txtmonth").val(),
+        year:$("#txtyear").val(),
+        designation:$("#txtdesignation").val(),
+        bank:$("#txtbankname").val(),
+        accountNumber:$("#txtacno").val(),
+        pan:$("#txtpan").val(),
+        basicPay:basicPay,
+        hra:hra,
+        lta:lta,
+        ma:ma,
+        providentFund:providentFund,
+        professionalTax:professionalTax,
+        grossSalary:grossSalary,
+        totalDeductions:totalDeductions,
+        netSalary:netSalary,
+        secret:secret
+    };
+    var arg=preprocessing(paras);
+    alert(arg);
+    var params={
+      args:arg,
+      type: 1003,
+      fee:"0",
+      secret:secret,
+      publicKey:getPublicKey(),
+      countryCode:"IN"
+    };
+    $.ajax({
+      url: 'http://54.251.138.1:9305/api/dapps/338bad04fc5afdffcdb98c00f6c1ecfbbe53af615bce1da4eaf14c23a331ba06/transactions/unsigned/',
+      type: 'PUT',
+      data: params,
+      success: function(response) {
+        alert(JSON.stringify(response));
+        if(response.success===true)
+        {
+          alert("Successfully Issued");
+        }
+        else
+        {
+          alert("Failed to issue certificate");
+        }
+      }
+      });
+  });
+  });
+</script>
+</head>
+​
+<body> 
+ <h3 text-align="center"><b> ISSUE CERTIFICATE</b></h3>
+ <table>
+  <tr>
+      <td><label>EMAIL:</label></td>
+      <td><input type="email" id="txtemail" ><br></td>
+  </tr>
+  <tr>
+    <td><label>NAME:</label></td>
+    <td><input type="text" id="txtname" disabled><br></td>
+  </tr>
+  <tr>
+    <td><label>EMPLOYEEID:</label></td>
+    <td><input type="text" id="txtempid" disabled><br></td>
+  </tr>
+  <tr>
+    <td><label>DESIGNATION:</label></td>
+    <td><input type="text" id="txtdesignation" disabled><br></td>
+  </tr>
+  <tr>
+    <td><label>ACTUALSALARY:</label></td>
+    <td><input type="text" id="txtactualsalary" disabled><br></td>
+  </tr>
+  <tr>
+    <td><label>EMPLOYER:</label></td>
+    <td><input type="text" id="txtemployer" placeholder="employer name"><br></td>
+  </tr>
+  <tr>
+    <td><label>MONTH:</label></td>
+    <td><input type="text"  id="txtmonth" placeholder="Month"><br></td>
+  </tr>
+  <tr>
+    <td><label>YEAR:</label></td>
+    <td><input type="text"  id="txtyear" placeholder="Year"><br></td>
+  </tr>
+  <tr>
+    <td><label>BANK NAME:</label></td>
+    <td><input type="text" id="txtbankname" placeholder="Bank name"><br></td>
+  </tr>
+  <tr>
+    <td><label>ACCOUNT NO:</label></td>
+    <td><input type="text" id="txtacno" placeholder="Account number"><br></td>
+  </tr>
+  <tr>
+    <td><label>PAN:</label></td>
+    <td><input type="text" id="txtpan" placeholder="PAN"><br></td>
+  </tr>
+  <tr>
+    <td><label>HRA:</label></td>
+    <td><input type="text" id="txthra" placeholder="HRA"><br></td>
+  </tr>    
+  <tr>
+    <td><label>LTA:</label></td>
+    <td><input type="text" id="txtlta" placeholder="LTA"><br></td>
+  </tr>
+  <tr>
+   <td><label>MA:</label></td>
+   <td><input type="text" id="txtma" placeholder="MA"><br></td>
+  </tr>
+  <tr>
+    <td><label>PF:</label></td>
+    <td><input type="text" id="txtpf" placeholder="PF"><br></td>
+  </tr> 
+  <tr>
+    <td><label>PT:</label></td>
+    <td><input type="text" id="txtpt" placeholder="PT"><br></td>
+  </tr>
+  <tr>
+    <td colspan="2"><button id="issuecert">ISSUE CERTIFICATE</button></td>
+  </tr>
+</table>
+  </body>
+</html>

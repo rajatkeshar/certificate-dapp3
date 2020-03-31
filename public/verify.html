@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+$(document).ready(function(){
+             var jData;
+             $("#verify").click(function(){
+                 jData={
+                     data: $("#json").val()
+                 }
+                 $.post("http://54.251.138.1:9305/api/dapps/338bad04fc5afdffcdb98c00f6c1ecfbbe53af615bce1da4eaf14c23a331ba06/verifypayslip/",jData,function(data,status){
+                     $("#1").html(data);
+         });
+             });
+         });
+
+</script>
+<style>
+       html, body {
+           height: 100%;
+       }
+
+       html {
+           display: table;
+           margin: auto;
+       }
+
+       body {
+           display: table-cell;
+           vertical-align: middle;
+       }
+       </style>
+</head>
+
+<body style="text-align:center">
+<h2 style="text-align:center">BLOCKCHAIN CERTIFICATION VERIFIER</h2>
+<input type="text" id="json" style="height:45px;width:480px">
+<button id="verify" style="background:#00FA9A; height:50px; width:150px">Submit</button>
+<h4 style="color: rgb(0, 5, 5)">Paste your json data to verify</h4>
+<span id=1></span><br>
+<span id=2></span>
+</body>
+
+</html>

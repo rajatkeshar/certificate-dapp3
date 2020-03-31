@@ -1,0 +1,36 @@
+{
+  "peers": [],
+  "secrets": [
+    "flame bottom dragon rely endorse garage supply urge turtle team demand put",
+    "thrive veteran child enforce puzzle buzz valley crew genuine basket start top",
+    "black tool gift useless bring nothing huge vendor asset mix chimney weird",
+    "ribbon crumble loud chief turn maid neglect move day churn share fabric",
+    "scan prevent agent close human pair aerobic sad forest wave toe dust"
+  ],
+  "email": {
+    "service" : "gmail",
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "auth": {
+        "user": "john.vikingsdownload@gmail.com",
+        "pass": "Windlm946356"
+    },
+    "tls": { "rejectUnauthorized": false},
+    "debug":true
+  },
+  "token": {
+    "email": "vinod91@yopmail.com",
+    "password": "viNODH12$",
+    "totp": "string"
+  },
+  "links": {
+    "verifyLink": "http://52.201.227.220/payroll_structured/Views/Verify/verify.html",
+    "registerEmp": "http://52.201.227.220/payroll_structured/Token_generator/token.html"
+  },
+  "tokenKey": "Implementing JWT tokens",
+  "defaultFee": "0",
+  "centralServerHash": "CVPNb8BEEznSuxfof43q8M/bs3m9BXUliLMg92niz1M=",
+  "bkvs": "http://54.254.174.74:8080",
+  "centralServer": "http://52.201.227.220:8080",
+  "superdapp": "048c1869547f60db8a6cd93b06a786abe5f50c4567198f4df0376462f9a20c5e"
+}

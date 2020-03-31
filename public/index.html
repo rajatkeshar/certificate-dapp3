@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <title>Login page</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script>
+            $(document).ready(function(){
+                           var email,password;
+                           $("#login").click(function(){   
+                               email=$("#email").val();
+                               password=$("#password").val();
+                            $.post("http://54.251.138.1:9305/api/dapps/338bad04fc5afdffcdb98c00f6c1ecfbbe53af615bce1da4eaf14c23a331ba06/userlogin/",
+                            {email: email,password: password},
+                            function(data){
+                               if(data.isSuccess===true)
+                               {
+                                   window.location.href="wallet1.html"+"?"+data.data.email;
+                               }
+                               else
+                               {
+                                   $("#message").html("Username or Password is incorrect");
+                               }
+                       });
+                           });
+                       });
+           </script>
+    </head>
+    <body>
+        Email: <input type="text" id="email"/><br>
+        Password: <input type="password" id="password"/><br>
+        <button id="login">Login</button><br>
+        <span id="message"></span>
+    </body>
+</html>

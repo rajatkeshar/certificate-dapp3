@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+   <head>
+       <title>
+           sign up
+       </title>
+       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+       <script>
+           $(document).ready(function(){
+                var name,emailid,password,type,countryCode,countryId;
+                $("#signup").click(function(){
+            countryId=$("#countryId").val();
+            countryCode=$("#countryCode").val();
+            emailid=$("#email").val();        
+                        name=$("#name").val();
+                        password=$("#password").val();
+                        type=$("#type").val();
+                    $.post("http://54.251.138.1:9305/api/dapps/338bad04fc5afdffcdb98c00f6c1ecfbbe53af615bce1da4eaf14c23a331ba06/usersignup/",{countryId:countryId,countryCode:countryCode,emailid:emailid,name:name,password:password,type:type},function(data){
+                    if(data==="success")
+                    {
+                       alert("successfully registered");
+                       $("#message").empty().html(data);            
+                       window.location.href="index.html";
+
+                    }
+                    else
+                    {
+                        alert("error");
+                        $("#message").empty().html(data);        
+                    }
+            });
+                });
+            });
+
+</script>
+   </head>
+<body>
+<h2>signup</h2>
+
+<form>
+countryId:<br>
+ <input type="text" name="countryId" id="countryId">
+ <br>
+countryCode:<br>
+ <input type="text" name="countryCode" id="countryCode">
+ <br>
+ Name:<br>
+ <input type="text" name="name" id="name">
+ <br>
+ Email:<br>
+ <input type="text" name="email" id="email">
+ <br>
+ Password:<br>
+ <input type="password" name="password" id="password">
+ <br>
+ Confirm Password:<br>
+ <input type="password" name="confirmpassword" id="confirmpassword">
+ <br>
+type:<br>
+ <input type="text" name="type" id="type">
+ <br>
+ <br>
+ <input type="button" value="signup" id="signup">
+<span id="message"></span>
+</form>
+</body>
+</html>

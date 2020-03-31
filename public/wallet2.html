@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+    <title>Wallet Page</title>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="https://www.belrium.io/lib/img/logo.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <link href="css/style.css" rel="stylesheet" type="text/css">
+
+  <script>
+    $(document).ready(function(){
+    var querystring=decodeURIComponent(window.location.search);
+    querystring=querystring.substring(1);
+    var queries=querystring.split('&');
+    $("#addr").empty().html(queries[0]);
+    $("#balan").empty().html(queries[1]);
+    $("#username").empty().html(queries[2]);
+});
+</script>
+</head>
+
+<!-- Navbar -->
+<div class="container-fluid">
+    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+        <a class="navbar-brand">
+            <a href="Home.html"><img src="https://www.belrium.io/lib/img/logo.png" alt="Belrium logo"></a>
+        </a>
+        
+<div id="mySidebar" class="sidebar"> 
+  <a href="javascript:void(0)" class="closebtn pull-right" onclick="closeNav()">×</a>
+  <a href="Wallet1.html">Wallet </a>
+  <a href="KYCDashboard.html">KYC</a>
+  <a href="Issue.html">Issue</a>
+  <a href="Dashboard.html">Dashboard</a>
+  <a href="Logout.html">Logout</a>
+</div>
+</nav>
+</div><br><br><br>
+
+  
+<!--Body-->
+<body style="background-color:#ffffff">  
+        <div class="container-fluid">
+            <div id="main pull-right">
+                <button class="openbtn" onclick="openNav()">☰ </button>  
+            </div>
+            
+            <div class="col-md-8">
+            <h3>Congratulations. You have just created a wallet on the Belrium Network</h3><br>
+            
+            
+            <div class="col-sm-8 ridge" style="float:right; background-color: #eff1f4">
+                <img src="https://www.belrium.io/lib/img/logo.png" alt="Belrium logo" style="float:left;width:100px;height:102px;"> <br>
+                <p style="float:right">BAL: <span id="balan"></span> <span style="color: #AF070E"><b>Bel</b></span> </p>        
+                <br><br><br><br><br>
+                         <p>WALLET ADDRESS: <span id="addr"></span><br></p> 
+                          <p>VALID FROM: 2018</p><br>
+                          <p>USER NAME:<span id="username"></span></p>
+                          <p style="text-align:right">PREMIUM</p>
+            </div>
+            </div><br><br>
+        </div><br>
+        <h3 style="text-align:center">Start issuing certificate to your users: <a href="Issue.html"><button type="button" class="btn btn-primary">Issue Now </button></a> </h3>
+        
+                
+                
+</div><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<!--end of body-->
+
+
+<!--End of login form script-->
+<!-- Collapse Sidepannel Button Script-->
+<script>
+    function openNav() {
+        document.getElementById("mySidebar").style.width = "250px";
+        document.getElementById("main").style.marginLeft = "250px";
+    }
+    
+    function closeNav() {
+        document.getElementById("mySidebar").style.width = "0";
+        document.getElementById("main").style.marginLeft= "0";
+    }
+    </script>
+<!--end of script-->
+</body>
+<!-- Footer -->
+<div class="footer">
+    <p> Copyright @2018 Belrium. All rights reserved</p>
+</div>
+<!-- End of footer-->
+</html>
