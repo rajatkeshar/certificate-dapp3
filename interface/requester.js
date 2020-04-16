@@ -90,9 +90,15 @@ app.route.post("/requester/viewRequest", async function(req){
 });
 
 app.route.get("/requester/list/assets", async function(req) {
-    console.log("############### calling list asset request: ", req.query)
-
+    var issuedCert = await app.model.Issue.findAll();
     var requester = await app.model.Requester.findAll();
+    var assetIds = Object.keys(_.keyBy(issuedCert, 'transactionId'));
+
+    for(var i=0; i<assetIds.length; i++) {
+      if(requester.map(function(e) { return e.assetId; }).indexOf(assetIds[i]) < 0) {
+        requester.push({assetId: assetIds[i]});
+      }
+    };
 
     if(!requester) {
         return {
