@@ -3,7 +3,7 @@ var sodium = require('sodium').api;
 var centralServerHash = require('../../../dappsConfig.json').centralServerHash;
 
 module.exports = {
-    
+
     MakeKeypair: function (hash) {
         var keypair = sodium.crypto_sign_seed_keypair(hash);
         return {
@@ -11,11 +11,11 @@ module.exports = {
           privateKey: keypair.secretKey
         };
     },
-    
+
     Sign: function (hash, keypair) {
         return sodium.crypto_sign_detached(hash, Buffer.from(keypair.privateKey, 'hex'));
     },
-    
+
     Verify: function (hash, signature, publicKey) {
         //var signatureBuffer = new Buffer(signature);
         //var publicKeyBuffer = new Buffer(publicKey);
@@ -26,7 +26,7 @@ module.exports = {
     getHash: function(data){
             return  crypto.createHash('sha256').update(data).digest(); //buffer.toBuffer()
     },
-    
+
     getSignature: function(data, secret){
         var datahash = this.getHash(data);
         return this.getSignatureByHash(datahash, secret);

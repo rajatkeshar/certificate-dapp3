@@ -30,7 +30,7 @@ app.route.post('/query/employees', async function(req){
             });
         });
     });
-    
+
     var employees = await new Promise((resolve)=>{
         let sql = `select empid, name from employees where deleted = '0' limit ? offset ?;`;
         app.sideChainDatabase.all(sql, [req.query.limit, req.query.offset], (err, row)=>{
@@ -242,7 +242,7 @@ app.route.post('/query/superuser/statistic/pendingAuthorization', async function
 })
 
 app.route.post('/query/departments/topIssued', async function(req){
-    
+
     var timespan = util.getMilliSecondLimits(req.query.month || new Date().getMonth() + 1, req.query.year || new Date().getFullYear());
     var result = await new Promise((resolve)=>{
         let sql = "select departments.name as department, count(issues.pid) as count from departments left join issues on issues.did = departments.did and issues.status = 'issued' and timestampp between ? and ? group by departments.name order by 2 desc limit ?;"
@@ -294,7 +294,7 @@ app.route.post('/query/department/assets', async function(req){
         }
         else{
             limits.first = util.getMilliSecondLimits(1, req.query.year).first;
-            limits.last = util.getMilliSecondLimits(12, req.query.year).last;                                              
+            limits.last = util.getMilliSecondLimits(12, req.query.year).last;
         }
         conditionString += " and issues.timestampp between ? and ?";
         inputs.push(limits.first, limits.last);
@@ -517,7 +517,7 @@ app.route.post('/query/issuer/statistic/pendingIssues', async function(req){
         inputs.push(req.query.department);
     }
 
-    var queryString = ` select issues.pid as pid, departments.name as departmentName, employees.name as receipientName, issues.authLevel as authLevel, departments.levels as totalLevels, issues.timestampp as timestamp, employees.email as receipientEmail from issues join departments on issues.did = departments.did join employees on issues.empid = employees.empid where issues.status = 'authorized' and issues.iid = ?${departmentCondition}`;
+    var queryString = ` select issues.pid as pid, departments.name as departmentName, employees.name as receipientName, issues.authLevel as authLevel, departments.levels as totalLevels, issues.timestampp as timestamp, employees.email as receipientEmail from issues join departments on issues.did = departments.did join employees on issues.empid = employees.empid where issues.status = 'pending' and issues.iid = ?${departmentCondition}`;
 
     var total = await new Promise((resolve)=>{
         let sql = `select count(*) as total from (${queryString});`
@@ -817,7 +817,7 @@ app.route.post('/query/employees2', async function(req){
         queryArray.push(req.query.iid);
     }
 
-    var query = `select employees.empid, employees.email, employees.name, employees.department, count(issues.pid) as assetCount from employees left join issues on issues.empid = employees.empid and issues.status = 'issued'${issuerFilterCondition} where employees.deleted = '0'${issuerFilterCondition2} group by employees.empid`; 
+    var query = `select employees.empid, employees.email, employees.name, employees.department, count(issues.pid) as assetCount from employees left join issues on issues.empid = employees.empid and issues.status = 'issued'${issuerFilterCondition} where employees.deleted = '0'${issuerFilterCondition2} group by employees.empid`;
 
     var total = await new Promise((resolve)=>{
         let sql = `select count(*) from (${query});`;
@@ -835,7 +835,7 @@ app.route.post('/query/employees2', async function(req){
     });
 
     queryArray.push(req.query.limit || 20, req.query.offset || 0);
-    
+
     var employees = await new Promise((resolve)=>{
         let sql = `${query} limit ? offset ?;`;
         app.sideChainDatabase.all(sql, queryArray, (err, row)=>{
@@ -906,7 +906,7 @@ app.route.post('/query/issuer/departments/ranks', async function(req){
         }
         else{
             limits.first = util.getMilliSecondLimits(1, req.query.year).first;
-            limits.last = util.getMilliSecondLimits(12, req.query.year).last;                                              
+            limits.last = util.getMilliSecondLimits(12, req.query.year).last;
         }
         conditionString += " and issues.timestampp between ? and ?";
         inputs.push(limits.first, limits.last);
@@ -961,7 +961,7 @@ app.route.post('/query/authorizer/departments/ranks', async function(req){
         }
         else{
             limits.first = util.getMilliSecondLimits(1, req.query.year).first;
-            limits.last = util.getMilliSecondLimits(12, req.query.year).last;                                              
+            limits.last = util.getMilliSecondLimits(12, req.query.year).last;
         }
         conditionString += " and issues.timestampp between ? and ?";
         inputs.push(limits.first, limits.last);

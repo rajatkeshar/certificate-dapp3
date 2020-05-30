@@ -5,6 +5,8 @@ var constants = require('./constants.js');
 const URL = constants.links.centralserver;
 module.exports = {
 	call: async function(method, url_path, payload, cb){
+		console.log("URL: ", URL);
+		console.log("url_path@@@@@@@@@@@@@@@@@@@: ", url_path);
 		return new Promise((resolve, reject) => {
 			var options = {
 				method: method,
@@ -29,5 +31,3 @@ module.exports = {
 		});
 	}
 }
-
-

@@ -30,7 +30,7 @@ module.exports.exists = async function(req, cb){
 
     var response = await SwaggerCall.call('GET', '/api/v1/user/exist?email=' + param.email, param);
     return response;
-    
+
 }
 
 app.route.post('/user/exist', module.exports.exists);
@@ -75,11 +75,11 @@ app.route.post('/userlogin', async function (req, cb) {
 
     //     response.dappToken = token;
     // }
-    
+
     return response;
 
  });
- 
+
  module.exports.signup = async function (req, cb) {
      logger.info("Entered BKVS signup");
     var params={
@@ -121,8 +121,7 @@ app.route.post('/userlogin', async function (req, cb) {
  app.route.post('/usersignup', module.exports.signup);
 
  app.route.post('/registerEmployeeToken', async function(req, cb){
-
-        await locker("registerEmployeeToken@" + req.query.token);
+     await locker("registerEmployeeToken@" + req.query.token);
      logger.log("Entered /registerEmployeeToken API" + req.query.token);
      var options = {
          condition: {
@@ -173,7 +172,7 @@ app.route.post('/payslips/employee/issued', async function(req, cb){
     var employee = await app.model.Employee.findOne({
         condition: {
             walletAddress: req.query.walletAddress
-        }, 
+        },
         fields: ['empid']
     });
     if(!employee) return {
@@ -220,7 +219,7 @@ app.route.post('/payslips/employee/issued', async function(req, cb){
 //     var employee = await app.model.Employee.findOne({
 //         condition: {
 //             walletAddress: req.query.walletAddress
-//         }, 
+//         },
 //         fields: ['empid']
 //     });
 //     if(!employee) return {
@@ -265,9 +264,9 @@ app.route.post('/payslips/employee/issued', async function(req, cb){
 //         else issue.issuedBy = "Deleted Issuer";
 
 //         issue.month = payslip.month;
-//         issue.year = payslip.year;  
-//         result.push(issue);   
-        
+//         issue.year = payslip.year;
+//         result.push(issue);
+
 //         return {
 //             issuedPayslips: result,
 //             isSuccess: true
@@ -300,7 +299,7 @@ app.route.post('/payslips/employee/issued', async function(req, cb){
 //             else issue.issuedBy = "Deleted Issuer";
 
 //             issue.month = payslips[i].month;
-//             issue.year = payslips[i].year;  
+//             issue.year = payslips[i].year;
 //             result.push(issue);
 //         }
 
@@ -329,7 +328,7 @@ app.route.post('/payslip/getIssuedByPid', async function(req, cb){
             pid: issue.pid
         }
     });
-    
+
     for(i in auths){
         let authorizer = await app.model.Authorizer.findOne({
             condition: {
@@ -372,7 +371,7 @@ app.route.post('/payslip/returnHash', async function(req, cb){
     return {
         hash: issue.hash,
         isSuccess: true
-    }   
+    }
 });
 
 app.route.post('/employee/payslips/statistic', async function(req, cb){
@@ -399,7 +398,7 @@ app.route.post('/employee/payslips/statistic', async function(req, cb){
         limit: req.query.limit,
         offset: req.query.offset
     });
-    
+
     return {
         issuedPayslips: issues,
         total: count,
@@ -441,7 +440,7 @@ app.route.post('/payslip/statistic', async function(req, cb){
             isSuccess: true
         }
     }
-    
+
     var signatures = await app.model.Cs.findAll({
         condition: {
             pid: req.query.pid
@@ -557,7 +556,7 @@ app.route.post('/payslip/statistic2', async function(req, cb){
         result.reason = rejected.reason;
         return result;
     }
-    
+
     if(issue.status === 'issued'){
         var transaction = await app.model.Transaction.findOne({
             condition: {
@@ -642,18 +641,18 @@ app.route.post('/getPayedPayslip', async function(req, cb){
             hash: Buffer.from(req.query.hash, 'base64').toString()
         }
     });
-    
+
     if(!issue) return {
         message: "Hash not found",
         isSuccess: false
     }
-    
+
     var pid = issue.pid;
     if(issue.status !== "issued") return {
         message: "Payslip not issued yet",
         isSuccess: false
     }
-    
+
     // var payed = await app.model.Payment.findOne({
     //     condition: {
     //         pid: pid
@@ -709,7 +708,7 @@ app.route.post('/getPayedPayslip', async function(req, cb){
             pid: pid
         }
     });
-    
+
     for(i in signs){
         var authorizer = await app.model.Authorizer.findOne({
             condition: {

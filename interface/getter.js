@@ -3,7 +3,7 @@ var util = require('../utils/util');
 app.route.post('/issuer/statistic/counts', async function(req){
     var pendingIssuesCount = await app.model.Issue.count({
         iid: req.query.iid,
-        status: 'authorized'
+        status: 'pending'
     });
     var rejectedIssuesCount = await app.model.Rejected.count({
         iid: req.query.iid
@@ -23,7 +23,7 @@ app.route.post('/issuer/statistic/counts', async function(req){
 app.route.post('/issuer/statistic/pendingIssues', async function(req){
     var condition = {
         iid: req.query.iid,
-        status: 'authorized'
+        status: 'pending'
     }
     var total = await app.model.Issue.count(condition);
     var pendingIssues = await app.model.Issue.findAll({
@@ -243,7 +243,7 @@ app.route.post('/authorizer/statistic/counts', async function(req){
         signCount: signCount,
         rejectedCount: rejectedCount,
         pendingCount: pendingCount
-    } 
+    }
 });
 
 app.route.post('/authorizer/statistic/signedIssues', async function(req){
@@ -610,7 +610,7 @@ app.route.post('/receipient/email/exists', async function(req){
         condition: condition
     });
     if(!receipient) return {
-        exists: false,  
+        exists: false,
         isSuccess: true
     }
     return {
@@ -660,7 +660,7 @@ app.route.post("/statistics/monthlyCounts", async function(req){
         });
         if(!authorizer) return {
             isSuccess: false,
-            message: "Invalid Authorizer" 
+            message: "Invalid Authorizer"
         }
 
         for(let i = 1; i <= 12; i++){

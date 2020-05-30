@@ -103,6 +103,73 @@ function strToBool(s) {
     return regex.test(s);
 }
 
+app.route.post("/issuer/track/assets/status", async function(req) {
+  var issuer = await app.model.Issuer.findOne({
+    condition: { email: req.query.email }
+  });
+  if(!issuer) {
+    return {message: "issuer not found"}
+  }
+  var issue = await app.model.Issue.findAll({
+    condition: { iid: issuer.iid }
+  });
+  console.log("issue: ", issue);
+  await new Promise((resolve, reject) => {
+    data = [];
+    issue.map(async(obj, index) => {
+      var requester = await app.model.Requester.findAll({
+        condition: {
+            assetId: obj.transactionId,
+            ownerStatus: "true",
+            issuerStatus: "false",
+        }
+      });
+
+      requester.forEach((item, i) => {
+        data.push(item);
+      });
+
+      if(index == issue.length-1) {
+          resolve();
+      }
+    })
+  })
+  if(!data.length) {
+    return {message: "no request found"};
+  }
+  await new Promise((resolve, reject) => {
+    data.map(async(obj, index) => {
+      var issue = await app.model.Issue.findOne({
+        condition: { transactionId: obj.assetId }
+      });
+      var owner = await app.model.Employee.findOne({
+        condition: { empid: issue.empid }
+      });
+      if(owner) {
+        data[index].owner = {
+          name: owner.name,
+          email: owner.email,
+          department: owner.department
+        }
+      }
+      if(issuer) {
+        data[index].issuer = {
+          email: issuer.email
+        }
+      }
+      if(index == data.length-1) {
+          resolve();
+      }
+    })
+  })
+
+  console.log("data: ", data);
+  return {
+      message: "Asset list",
+      data: data
+  }
+});
+
 String.prototype.bool = function() {
     return strToBool(this);
 };

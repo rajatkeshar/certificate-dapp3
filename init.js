@@ -34,6 +34,11 @@ module.exports = async function () {
             type: 1007,
             name: "Verify View Request By Owner",
             location: 'owner.verifyViewRequest'
+        },
+        updateIssueLimit: {
+            type: 1008,
+            name: "Update Issue Limit",
+            location: 'payroll.updateIssueLimit'
         }
     }
     for(i in contractObjects){

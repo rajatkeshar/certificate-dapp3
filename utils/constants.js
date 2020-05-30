@@ -16,7 +16,8 @@ module.exports = {
     inTransfer: 0.001,
     outTransfer: 0.001,
     viewRequest: 0,
-    verifyViewRequest: 0
+    verifyViewRequest: 0,
+    updateIssueLimit: 0
   },
     centralServerHash: config.centralServerHash,
   links: {

@@ -81,6 +81,72 @@ app.route.post("/owner/verifyViewRequest", async function(req){
     return response
 });
 
+app.route.post("/owner/track/assets/status", async function(req) {
+  var owner = await app.model.Employee.findOne({
+    condition: { email: req.query.email }
+  });
+  if(!owner) {
+    return {message: "owner not found"}
+  }
+  var issue = await app.model.Issue.findAll({
+    condition: { empid: owner.empid }
+  });
+
+  await new Promise((resolve, reject) => {
+    data = [];
+    issue.map(async(obj, index) => {
+      var requester = await app.model.Requester.findAll({
+        condition: {
+            assetId: obj.transactionId,
+            ownerStatus: "false",
+            issuerStatus: "false",
+        }
+      });
+
+      requester.forEach((item, i) => {
+        data.push(item);
+      });
+
+      if(index == issue.length-1) {
+          resolve();
+      }
+    })
+  })
+  if(!data.length) {
+    return {message: "no request found"};
+  }
+  await new Promise((resolve, reject) => {
+    data.map(async(obj, index) => {
+      var issue = await app.model.Issue.findOne({
+        condition: { transactionId: obj.assetId }
+      });
+      var issuer = await app.model.Issuer.findOne({
+        condition: { iid: issue.iid }
+      });
+      if(owner) {
+        data[index].owner = {
+          name: owner.name,
+          email: owner.email,
+          department: owner.department
+        }
+      }
+      if(issuer) {
+        data[index].issuer = {
+          email: issuer.email
+        }
+      }
+      if(index == data.length-1) {
+          resolve();
+      }
+    })
+  })
+
+  return {
+      message: "Asset list",
+      data: data
+  }
+});
+
 function strToBool(s) {
     // will match one and only one of the string 'true','1', or 'on' rerardless
     // of capitalization and regardless off surrounding white-space.

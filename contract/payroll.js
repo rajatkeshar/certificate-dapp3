@@ -459,5 +459,30 @@ module.exports = {
             default: return "Invalid role"
         }
 
+    },
+    updateIssueLimit: async function(limit, expirydate){
+      var currLimit = await app.model.Issuelimit.findOne({
+          condition: {
+              name: "issuelimit"
+          }
+      });
+      if(!currLimit){
+          app.sdb.create("issuelimit", {
+              name: "issuelimit",
+              value: limit,
+              expirydate: expirydate
+          });
+      } else {
+          app.sdb.update("issuelimit", {
+              value: currLimit.value + limit
+          }, {
+              name: "issuelimit"
+          });
+          app.sdb.update("issuelimit", {
+              expirydate: expirydate
+          }, {
+              name: "issuelimit"
+          });
+      }
     }
 }

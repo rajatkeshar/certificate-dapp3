@@ -7,6 +7,7 @@ var constants = require("../utils/constants");
 var httpCall = require('../utils/httpCall');
 var address = require('../utils/address');
 var belriumJS = require('belrium-js');
+var _ = require("lodash");
 
 app.route.post("/requester/viewRequest", async function(req){
     console.log("############### calling view request: ", req.query)
@@ -28,6 +29,14 @@ app.route.post("/requester/viewRequest", async function(req){
     if(!issuedCert) {
       return {
           message: "Asset does not exist"
+      }
+    }
+    var employee = await app.model.Employee.findOne({
+      condition: { empid: issuedCert.empid }
+    });
+    if(employee.walletAddress == address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))) {
+      return {
+        message: "You can not make view request on own asset"
       }
     }
     console.log("address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)): ", address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)));
@@ -90,28 +99,114 @@ app.route.post("/requester/viewRequest", async function(req){
 });
 
 app.route.get("/requester/list/assets", async function(req) {
-    var issuedCert = await app.model.Issue.findAll();
-    var requester = await app.model.Requester.findAll();
-    var assetIds = Object.keys(_.keyBy(issuedCert, 'transactionId'));
+    var data = [];
+    var issuedCert = await app.model.Issue.findAll({
+      condition: {status: "issued"}
+    });
+    issuedCert.map(cert=> {
+      assetId = cert.transactionId
+      details = JSON.parse(cert.data);
+      data.push({assetId: assetId, name: details.name, degree: details.degree})
+    });
+    return {
+        message: "Asset list",
+        data: data
+    }
+});
 
-    for(var i=0; i<assetIds.length; i++) {
-      if(requester.map(function(e) { return e.assetId; }).indexOf(assetIds[i]) < 0) {
-        requester.push({assetId: assetIds[i]});
+app.route.post("/requester/track/assets/status", async function(req) {
+    var requester = await app.model.Requester.findAll({
+      condition: {
+          requesterWalletAddress: req.query.address
       }
-    };
+    });
 
     if(!requester) {
-        return {
-          message: "No details found"
-        }
+        return { message: "No details found" }
     }
 
+    await new Promise((resolve, reject) => {
+      requester.map(async(obj, index) => {
+        var issue = await app.model.Issue.findOne({
+          condition: { transactionId: obj.assetId }
+        });
+        var issuer = await app.model.Issuer.findOne({
+          condition: { iid: issue.iid }
+        });
+        var owner = await app.model.Employee.findOne({
+          condition: { empid: issue.empid }
+        });
+        if(owner) {
+          requester[index].owner = {
+            name: owner.name,
+            email: owner.email,
+            department: owner.department
+          }
+        }
+        if(issuer) {
+          requester[index].issuer = {
+            email: issuer.email
+          }
+        }
+        if(index == requester.length-1) {
+            resolve();
+        }
+      })
+    })
+    if(!requester.length) {
+      return {message: "detail not found"};
+    }
     return {
         message: "Asset list",
         data: requester
     }
 });
 
+app.route.post("/requester/track/assets/status", async function(req) {
+    var requester = await app.model.Requester.findAll({
+      condition: {
+          requesterWalletAddress: req.query.address
+      }
+    });
+
+    if(!requester) {
+        return { message: "No details found" }
+    }
+
+    await new Promise((resolve, reject) => {
+      requester.map(async(obj, index) => {
+        var issue = await app.model.Issue.findOne({
+          condition: { transactionId: obj.assetId }
+        });
+        var issuer = await app.model.Issuer.findOne({
+          condition: { iid: issue.iid }
+        });
+        var owner = await app.model.Employee.findOne({
+          condition: { empid: issue.empid }
+        });
+        if(owner) {
+          requester[index].owner = {
+            name: owner.name,
+            email: owner.email,
+            department: owner.department
+          }
+        }
+        if(issuer) {
+          requester[index].issuer = {
+            email: issuer.email
+          }
+        }
+        if(index == requester.length-1) {
+            resolve();
+        }
+      })
+    })
+
+    return {
+        message: "Asset list",
+        data: requester
+    }
+});
 app.route.post("/requester/asset/get", async function(req) {
     console.log("############### calling list asset request: ", req.query.assetId)
 
@@ -151,6 +246,7 @@ app.route.post("/requester/asset/get", async function(req) {
         data: issuedCert
     }
 });
+
 
 function strToBool(s) {
     // will match one and only one of the string 'true','1', or 'on' rerardless

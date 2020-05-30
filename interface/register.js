@@ -5,6 +5,9 @@ var SuperDappCall = require("../utils/SuperDappCall")
 var TokenCall = require("../utils/TokenCall");
 var register = require("../interface/register");
 var registrations = require("../interface/registrations");
+var constants = require("../utils/constants");
+var httpCall = require('../utils/httpCall');
+var belriumJS = require('belrium-js');
 var authJwt = require("../interface/authController");
 var mailCall = require("../utils/mailCall");
 var SwaggerCall = require("../utils/SwaggerCall");
@@ -163,7 +166,7 @@ module.exports.getToken = async function(req, cb){
 
 app.route.post('/getToken', module.exports.getToken)
 
-//On issuer dashboard to display confirmed payslips which are confirmed by all authorizers 
+//On issuer dashboard to display confirmed payslips which are confirmed by all authorizers
 //GET call
 //inputs:month and year
 //outpu: pays array which contains the confirmed payslips.
@@ -182,12 +185,12 @@ app.route.post('/payslip/confirmedIssues',async function(req,cb){
         limit: req.query.limit,
         offset: req.query.offset
     });
-    
+
     return {
         total: total,
         confirmedPayslips: confirmedIssues
     }
-    
+
 })
 
 app.route.post('/payslip/initialIssue',async function(req,cb){
@@ -208,7 +211,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
        isSuccess: false
     }
     var identity = JSON.parse(employee.identity);
-   
+
     var timestamp = new Date().getTime();
 
      issuerid=req.query.issuerid;
@@ -249,7 +252,19 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
      }
 
      req.query.data.identity = identity;
-     
+     fromDate = req.query.data.fromDate;
+     toDate = req.query.data.toDate;
+     subject = req.query.data.subject;
+
+     if(!fromDate) {
+       return { isSuccess: false, message: "missing params: #fromDate"};
+     }
+     if(!toDate) {
+       return { isSuccess: false, message: "missing params: #toDate"};
+     }
+     if(!subject) {
+       return { isSuccess: false, message: "missing params: #subject"};
+     }
     // Check Payslip already issued
 
     var payslipString = JSON.stringify(req.query.data);
@@ -268,7 +283,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
     var sign = util.getSignatureByHash(hash, secret);
     var base64hash = hash.toString('base64');
     var base64sign = sign.toString('base64');
-    
+
     var issue = {
         pid:String(Number(app.autoID.get('issue_max_pid')) + 1),
         iid:issuerid,
@@ -314,10 +329,10 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
         pid: issue.pid,
         template: req.query.template
     });
-    
+
     app.autoID.increment('issue_max_pid');
 
-    await blockWait(); 
+    await blockWait();
 
     return {
         message: "Asset initiated",
@@ -454,7 +469,7 @@ app.route.post('/authorizer/authorizeMultiple', async function(req){
     }
 
     await blockWait();
-    
+
     return {
         results: results,
         isSuccess: true
@@ -681,7 +696,7 @@ async function authorizerReject(req){
         mailType: "sendRejected",
         mailOptions: {
             to: [issuer.email],
-            authorizerEmail: authorizer.email, 
+            authorizerEmail: authorizer.email,
             message: message,
             payslip: JSON.stringify(issue.data)
         }
@@ -834,7 +849,7 @@ app.route.post("/registerEmployee", async function(req, cb){
             }
         }
         var response = await registrations.exists(request, 0);
-        
+
 
         if(response.isSuccess == false) {
 
@@ -903,7 +918,7 @@ app.route.post("/registerEmployee", async function(req, cb){
                 var smalls = "abcdefghijklmnopqrstuvwxyz";
                 var symbols = "@!$";
                 var numbers = "1234567890";
-            
+
                 for (var i = 0; i < 3; i++){
                 text += caps.charAt(Math.floor(Math.random() * caps.length));
                 text += smalls.charAt(Math.floor(Math.random() * smalls.length));
@@ -913,7 +928,7 @@ app.route.post("/registerEmployee", async function(req, cb){
                 return text;
             }
 
-            var password = makePassword();        
+            var password = makePassword();
 
 
             var options = {
@@ -992,7 +1007,7 @@ app.route.post("/registerEmployee", async function(req, cb){
             }
 
         }
-            
+
         else{
             logger.info("Sent email to the employee to share wallet address");
             var check = await app.model.Pendingemp.findOne({
@@ -1003,7 +1018,7 @@ app.route.post("/registerEmployee", async function(req, cb){
             if(check){
                 app.sdb.del('pendingemp', {token: check.token});
             }
-            var jwtToken = await authJwt.getJwt(email);  
+            var jwtToken = await authJwt.getJwt(email);
             var crea = {
                 email: email,
                 empid: uuid,
@@ -1079,7 +1094,7 @@ app.route.post('/authorizer/authorizedAssets', async function(req, cb){
     var css = await app.model.Cs.findAll({
         condition: {
             aid: aid
-        }, 
+        },
         limit: req.query.limit,
         offset: req.query.offset
     });
@@ -1175,7 +1190,7 @@ app.route.post('/registerUser/', async function(req, cb){
         console.log("Entered Register User");
 
         switch(role){
-            case "issuer": 
+            case "issuer":
                 result = await app.model.Issuer.exists({
                     email: email,
                     deleted: '0'
@@ -1189,7 +1204,7 @@ app.route.post('/registerUser/', async function(req, cb){
                 });
                 break;
 
-            default: 
+            default:
                     logger.error("Invalid role");
                     return {
                         message: "Invalid role",
@@ -1238,7 +1253,7 @@ app.route.post('/registerUser/', async function(req, cb){
                 email: email
             }
         }
-        var response = await registrations.exists(request, 0);      
+        var response = await registrations.exists(request, 0);
 
         if(!response.isSuccess){
             var request = {
@@ -1260,7 +1275,7 @@ app.route.post('/registerUser/', async function(req, cb){
             var wallet = {
                 password: request.query.password
             }
-    
+
             var mailBody = {
                 mailType: "sendRegistered",
                 mailOptions: {
@@ -1273,7 +1288,7 @@ app.route.post('/registerUser/', async function(req, cb){
 
             logger.info("Registered a new user");
         }
-        
+
         var mapObj = {
             email: email,
             dappid: dappid,
@@ -1290,7 +1305,7 @@ app.route.post('/registerUser/', async function(req, cb){
         var timestampp = new Date().getTime();
         switch(role){
 
-            case "issuer": 
+            case "issuer":
             //getting the last registered id of an issuer
                 app.sdb.create('issuer', {
                     iid: app.autoID.increment('issuer_max_iid'),
@@ -1378,7 +1393,7 @@ app.route.post('/department/assignAuthorizers', async function(req, cb){
             name: req.query.department
         }
     });
-    
+
 
     if(department) {
         app.sdb.update('authdept', {deleted: '1'}, {
@@ -1395,7 +1410,7 @@ app.route.post('/department/assignAuthorizers', async function(req, cb){
             levels: levels.length
         });
         var did = app.autoID.get('department_max_did');
-    }   
+    }
     for(i in levels){
         if(levels[i] === "null") continue;
         app.sdb.create('authdept', {
@@ -1405,13 +1420,13 @@ app.route.post('/department/assignAuthorizers', async function(req, cb){
             deleted: '0'
         });
     }
-    
+
     await blockWait();
-    
+
     if(!department) return {
         isSuccess: true,
         message: "Created department and assigned"
-    
+
     }
     var pendingIssues = await app.model.Issue.findAll({
         condition: {
@@ -1572,71 +1587,78 @@ app.route.post('/generatePayslipLink', async function(req, cb){
         link: link,
         isSuccess: true
     }
-}); 
+});
 
 app.route.post("/centralserver/addIssuelimits", async function(req){
-    if(!req.query.centralServerKey) return {
-        isSuccess: false,
-        message: "Need to provide the centralServerKey, issue limit not updated."
-    }
-    if(!util.centralServerCheck(req.query.centralServerKey)) return {
-        isSuccess: false,
-        message: "Central Server authentication failed, issue limit not updated."
-    }         
-    if(!(req.query.limit && req.query.expirydate)) return {
-        isSuccess: false,
-        message: "Need to provide a new limit and expirydate."
-    }
-    try{
-        req.query.limit = Number(req.query.limit);
-    } catch(err){
-        return {
-            isSuccess: false,
-            message: "Limit should be a number"
-        }
-    }
-    var limit = await app.model.Issuelimit.findOne({
-        condition: {
-            name: "issuelimit"
-        }
-    });
-    if(!limit){
-        app.sdb.create("issuelimit", {
-            name: "issuelimit",
-            value: req.query.limit,
-            expirydate: req.query.expirydate
-        });
-    } else {
-        app.sdb.update("issuelimit", {
-            value: req.query.limit
-        }, {
-            name: "issuelimit"
-        });
-        app.sdb.update("issuelimit", {
-            expirydate: req.query.expirydate
-        }, {
-            name: "issuelimit"
-        });
-    }
-    await blockWait();
-    return {
-        isSuccess: true
-    }
+  if(!util.centralServerCheck(req.query.centralServerKey)) return {
+      isSuccess: false,
+      message: "Central Server authentication failed, issue limit not updated."
+  }
+
+  let options = {
+      fee: String(constants.fees.updateIssueLimit),
+      type: 1008,
+      args: JSON.stringify([req.query.limit, req.query.expirydate])
+  };
+  let secret = req.query.secret;
+  let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
+
+  console.log("############ transaction: ", transaction);
+  let dappId = util.getDappID();
+
+  let params = {
+      transaction: transaction
+  };
+
+  console.log("updateIssueLimit data: ", params);
+  var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+  console.log("@@@@@@@@@@@@@@@@@@@@@@@ response: ", response);
+  if(!response.success){
+      return {
+          message: JSON.stringify(response)
+      }
+  }
+
+  await blockWait();
+
+  return response
 });
 
 app.route.post("/getIssueLimit", async function(req){
-    var limit = await app.model.Issuelimit.findOne({
+    var totalCerts = await app.model.Issue.count({status:"issued"});
+    var limitLeft = await app.model.Issuelimit.findOne({
         condition: {
             name: "issuelimit"
         }
     });
-    if(!limit) return {
+    if(!limitLeft) return {
         isSuccess: false,
         message: "Limit not defined"
     }
     return {
         isSuccess: true,
-        limit: limit.value,
-        expirydate: limit.expirydate
+        totalLimit: limitLeft.value + totalCerts, 
+        limitLeft: limitLeft.value,
+        totalCertsIssued: totalCerts,
+        expirydate: limitLeft.expirydate
     }
 });
+
+app.route.post('/getAddressByEmployeeEmail', async function(req, cb){
+    logger.info("Entered /getAddressByEmployeeEmail API");
+    try{
+      var result = await app.model.Employee.findOne({
+          condition: {email: req.query.email}
+      });
+    }catch(err){
+        return {
+            message: "searchBy parameter not an Employee table column",
+            isSuccess: false
+        }
+    }
+    return {
+        result: {"address": result.walletAddress},
+        isSuccess: true
+    }
+})
