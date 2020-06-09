@@ -1226,11 +1226,13 @@ app.route.post('/registerUser/', async function(req, cb){
         }
 
         for(let i in departments){
+            console.log("departments[i]: ", departments[i]);
             let department = await app.model.Department.findOne({
                 condition: {
                     name: departments[i].name
                 }
             });
+            console.log("department: ", department);
             if(!department) return {
                 isSuccess: false,
                 message: "Invalid department"
@@ -1638,7 +1640,7 @@ app.route.post("/getIssueLimit", async function(req){
     }
     return {
         isSuccess: true,
-        totalLimit: limitLeft.value + totalCerts, 
+        totalLimit: limitLeft.value + totalCerts,
         limitLeft: limitLeft.value,
         totalCertsIssued: totalCerts,
         expirydate: limitLeft.expirydate
@@ -1659,6 +1661,42 @@ app.route.post('/getAddressByEmployeeEmail', async function(req, cb){
     }
     return {
         result: {"address": result.walletAddress},
+        isSuccess: true
+    }
+})
+
+app.route.post('/issuer/asset/details', async function(req, cb){
+    console.log("Entered here")
+    var issuerCheck = await app.model.Issuer.exists({
+        iid: req.query.iid
+    })
+    if(!issuerCheck) return {
+        isSuccess: false,
+        message: "Invalid issuer"
+    }
+    let filter = {
+      iid: req.query.iid
+    };
+
+    if(req.query.status) {
+      filter.status = req.query.status
+    }
+    if(req.query.did) {
+      filter.did = req.query.did
+    }
+    console.log("filter: ", filter);
+    var total = await app.model.Issue.count(filter);
+    var issues = await app.model.Issue.findAll({
+        condition: filter,
+        sort: {
+            timestampp: -1
+        },
+        offset: req.query.offset || 0,
+        limit: req.query.limit || 20
+    })
+    return {
+        total: total,
+        result: issues,
         isSuccess: true
     }
 })
