@@ -517,7 +517,7 @@ app.route.post('/query/issuer/statistic/pendingIssues', async function(req){
         inputs.push(req.query.department);
     }
 
-    var queryString = ` select issues.pid as pid, departments.name as departmentName, employees.name as receipientName, issues.authLevel as authLevel, departments.levels as totalLevels, issues.timestampp as timestamp, employees.email as receipientEmail from issues join departments on issues.did = departments.did join employees on issues.empid = employees.empid where issues.status = 'pending' and issues.iid = ?${departmentCondition}`;
+    var queryString = ` select issues.pid as pid, departments.name as departmentName, employees.name as receipientName, issues.authLevel as authLevel, departments.levels as totalLevels, issues.timestampp as timestamp, employees.email as receipientEmail from issues join departments on issues.did = departments.did join employees on issues.empid = employees.empid where issues.status = 'authorized' and issues.iid = ?${departmentCondition}`;
 
     var total = await new Promise((resolve)=>{
         let sql = `select count(*) as total from (${queryString});`

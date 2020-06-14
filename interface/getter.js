@@ -3,7 +3,7 @@ var util = require('../utils/util');
 app.route.post('/issuer/statistic/counts', async function(req){
     var pendingIssuesCount = await app.model.Issue.count({
         iid: req.query.iid,
-        status: 'pending'
+        status: 'authorized'
     });
     var rejectedIssuesCount = await app.model.Rejected.count({
         iid: req.query.iid
@@ -23,7 +23,7 @@ app.route.post('/issuer/statistic/counts', async function(req){
 app.route.post('/issuer/statistic/pendingIssues', async function(req){
     var condition = {
         iid: req.query.iid,
-        status: 'pending'
+        status: 'authorized'
     }
     var total = await app.model.Issue.count(condition);
     var pendingIssues = await app.model.Issue.findAll({
