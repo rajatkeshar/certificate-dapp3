@@ -764,10 +764,24 @@ app.route.post("/sharePayslips", async function(req, cb){
     mailCall.call("POST", "", mailBody, 0);
 })
 
+function makePassword() {
+    var text = "";
+    var caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    var smalls = "abcdefghijklmnopqrstuvwxyz";
+    var symbols = "@!$";
+    var numbers = "1234567890";
+
+    for (var i = 0; i < 3; i++){
+    text += caps.charAt(Math.floor(Math.random() * caps.length));
+    text += smalls.charAt(Math.floor(Math.random() * smalls.length));
+    text += symbols.charAt(Math.floor(Math.random() * symbols.length));
+    text += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    }
+    return text;
+}
+
 app.route.post("/registerEmployee", async function(req, cb){
     await locker("/registerEmployee");
-
-    logger.info("Entered /registerEmployee API");
 
     var countryCode = req.query.countryCode;
     var email = req.query.email;
@@ -778,279 +792,132 @@ app.route.post("/registerEmployee", async function(req, cb){
     var identity = JSON.stringify(req.query.identity);
     var dappid = util.getDappID();
     var token = req.query.token;
-    var groupName = req.query.groupName;
+    var groupName = req.query.groupName || "identity";
     var iid = req.query.iid
 
     var issuer = await app.model.Issuer.findOne({
-        condition: {
-            iid: iid,
-            deleted: '0'
-        }
+        condition: { iid: iid, deleted: '0' }
     });
 
-    if(!issuer) return {
-        message: "Invalid issuer",
-        isSuccess: false
-    }
+    if(!issuer) return { message: "Invalid issuer", isSuccess: false }
 
     var department = await app.model.Department.findOne({
-        condition: {
-            name: req.query.department
-        }
+        condition: { name: req.query.department }
     });
-    if(!department) return {
-        isSuccess: false,
-        message: "Invalid department"
-    }
+
+    if(!department) return { isSuccess: false, message: "Invalid department" }
 
     var issuerDepartment = await app.model.Issudept.findOne({
-        condition: {
-            iid: iid,
-            did: department.did,
-            deleted: '0'
-        }
+        condition: { iid: iid, did: department.did, deleted: '0' }
     });
-    if(!issuerDepartment) return {
-        isSuccess: false,
-        message: "Issuer can only register employees in his departments"
-    }
+
+    if(!issuerDepartment) return { isSuccess: false, message: "Issuer can only register employees in his departments" }
 
     var identityEmpCheck = await app.model.Employee.exists({
-        identity: identity,
-        deleted: '0'
+      identity: identity,
+      email: email,
+      empid: uuid,
+      deleted: '0'
     });
-    if(identityEmpCheck) return {
-        message: "Recipient with the same identity already exists",
-        isSuccess: false
+
+    if(identityEmpCheck) return { message: "Recipient with the same identity already exists", isSuccess: false }
+
+    var request = { query: { email: email } }
+    var response = await registrations.exists(request, 0);
+
+    if(response.isSuccess == false) {
+      logger.info("Registering the Recipient on BKVS", token);
+      if(token === "0" || token ==="-1") return "Error in retrieving token";
+
+      var options = {
+          countryCode: countryCode,
+          email: email,
+          groupName: groupName,
+          lastName: lastName,
+          name: name,
+          password: makePassword(),
+          type: 'user'
+      }
+
+      console.log("calling registration call with parameters: ", options, token);
+      var response = await TokenCall.call('POST', '/api/v1/merchant/user/register', options, token);
+      console.log("bkbs response: ", response)
+
+      if(!response) return { message: "No response from bkbs system", isSuccess: false }
+
+      if(!response.isSuccess) return { message: JSON.stringify(response), isSuccess: false }
+
+      console.log("BKBS Registration response is complete with response: " + JSON.stringify(response));
+
+      var wallet = response.data;
+      var createEmployee = {
+          email: email,
+          empid: uuid,
+          name: name + " " +lastName,
+          identity: identity,
+          iid: issuer.iid,
+          walletAddress: wallet.walletAddress,
+          department: req.query.department,
+          deleted: "0",
+          extra: extra
+      }
+
+      app.sdb.create('employee', createEmployee);
+
+      var mapcall = await SuperDappCall.call('POST', '/mapAddress', { address: wallet.walletAddress, dappid: dappid });
+      console.log("mapping Call: ", mapcall);
+
+      /*var mailBody = {
+          mailType: "sendEmployeeRegistered",
+          mailOptions: {
+              to: [createEmployee.email], empname: createEmployee.name, wallet: wallet
+          }
+      }
+      mailCall.call("POST", "", mailBody, 0);*/
+
+      var activityMessage = email + " is registered as an Employee in " + department + " department by " + issuer.email + ".";
+      app.sdb.create('activity', {
+        activityMessage: activityMessage,
+        pid: email,
+        timestampp: new Date().getTime(),
+        atype: 'employee'
+      });
+
+      await blockWait();
+
+      return { message: "Student Registered", isSuccess: true, employee: createEmployee }
+
+    } else {
+      logger.info("Sent email to the employee to share wallet address");
+      var check = await app.model.Pendingemp.findOne({
+            condition: { email: email }
+      });
+      if(check){
+          app.sdb.del('pendingemp', {token: check.token});
+      }
+      var jwtToken = await authJwt.getJwt(email);
+      var createEmployee = {
+          email: email,
+          empid: uuid,
+          name: name + " " + lastName,
+          identity: identity,
+          iid: issuer.iid,
+          token: jwtToken,
+          department: req.query.department,
+          extra: extra
+      }
+      app.sdb.create("pendingemp", createEmployee);
+      console.log("send mail to register wallet address");
+
+      var mailBody = {
+          mailType: "sendAddressQuery",
+          mailOptions: { to: [createEmployee.email], token: jwtToken, dappid: dappid }
+      }
+      mailCall.call("POST", "", mailBody, 0);
+      await blockWait();
+
+      return { token: jwtToken, message: "Awaiting wallet address", isSuccess: true }
     }
-
-        var result = await app.model.Employee.exists({
-            email: email,
-            deleted: "0"
-        });
-
-        if(result) return {
-            message: "Recipient already registered",
-            isSuccess: false
-        }
-
-        var result = await app.model.Employee.exists({
-            empid: uuid,
-            deleted: "0"
-        });
-        if(result) return {
-            message: "Recipient with Recipient ID already exists",
-            isSuccess: false
-        }
-
-        var request = {
-            query: {
-                email: email
-            }
-        }
-        var response = await registrations.exists(request, 0);
-
-
-        if(response.isSuccess == false) {
-
-            //start mock
-            var creat = {
-                email: email,
-                //empid: app.autoID.increment('employee_max_empid'),
-                empid: uuid,
-                name: name + " " +lastName,
-                identity: identity,
-                iid: issuer.iid,
-                walletAddress: makePassword(),
-                department: req.query.department,
-                deleted: "0",
-                extra: extra
-            }
-
-            console.log("About to make a row");
-
-            app.sdb.create('employee', creat);
-
-            var mapEntryObj = {
-                address: creat.walletAddress,
-                dappid: dappid
-            }
-            var mapcall = await SuperDappCall.call('POST', '/mapAddress', mapEntryObj);
-            console.log(JSON.stringify(mapcall));
-
-            var mailBody = {
-                mailType: "sendEmployeeRegistered",
-                mailOptions: {
-                    to: [creat.email],
-                    empname: creat.name,
-                    wallet: {}
-                }
-            }
-            mailCall.call("POST", "", mailBody, 0);
-
-            var activityMessage = email + " is registered as an Employee in " + department + " department by " + issuer.email + ".";
-            app.sdb.create('activity', {
-                activityMessage: activityMessage,
-                pid: email,
-                timestampp: new Date().getTime(),
-                atype: 'employee'
-            });
-
-            await blockWait();
-            return {
-                isSuccess: true,
-                message: "Created employee with mock",
-                employee: creat
-            }
-            //end mock
-
-            token = await register.getToken(0,0);
-
-            logger.info("Registering the Recipient on BKVS");
-
-            console.log(token);
-
-            if(token === "0" || token ==="-1") return "Error in retrieving token";
-
-            function makePassword() {
-                var text = "";
-                var caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                var smalls = "abcdefghijklmnopqrstuvwxyz";
-                var symbols = "@!$";
-                var numbers = "1234567890";
-
-                for (var i = 0; i < 3; i++){
-                text += caps.charAt(Math.floor(Math.random() * caps.length));
-                text += smalls.charAt(Math.floor(Math.random() * smalls.length));
-                text += symbols.charAt(Math.floor(Math.random() * symbols.length));
-                text += numbers.charAt(Math.floor(Math.random() * numbers.length));
-                }
-                return text;
-            }
-
-            var password = makePassword();
-
-
-            var options = {
-                countryCode: countryCode,
-                email: email,
-                groupName: groupName,
-                lastName: lastName,
-                name: name,
-                password: password,
-                type: 'user'
-            }
-
-            console.log("About to call registration call with parameters: " + JSON.stringify(options));
-
-            var response = await TokenCall.call('POST', '/api/v1/merchant/user/register', options, token);
-
-            if(!response) return {
-                message: "No response from register call",
-                isSuccess: false
-            }
-            if(!response.isSuccess) return {
-                message: JSON.stringify(response),
-                isSuccess: false
-            }
-            console.log("Registration response is complete with response: " + JSON.stringify(response));
-            var wallet = response.data;
-
-            var creat = {
-                email: email,
-                //empid: app.autoID.increment('employee_max_empid'),
-                empid: uuid,
-                name: name + " " +lastName,
-                identity: identity,
-                iid: issuer.iid,
-                walletAddress: wallet.walletAddress,
-                department: req.query.department,
-                deleted: "0",
-                extra: extra
-            }
-
-            console.log("About to make a row");
-
-            app.sdb.create('employee', creat);
-
-            var mapEntryObj = {
-                address: wallet.walletAddress,
-                dappid: dappid
-            }
-            var mapcall = await SuperDappCall.call('POST', '/mapAddress', mapEntryObj);
-            console.log(JSON.stringify(mapcall));
-
-            var mailBody = {
-                mailType: "sendEmployeeRegistered",
-                mailOptions: {
-                    to: [creat.email],
-                    empname: creat.name,
-                    wallet: wallet
-                }
-            }
-            mailCall.call("POST", "", mailBody, 0);
-
-            var activityMessage = email + " is registered as an Employee in " + department + " department by " + issuer.email + ".";
-            app.sdb.create('activity', {
-                activityMessage: activityMessage,
-                pid: email,
-                timestampp: new Date().getTime(),
-                atype: 'employee'
-            });
-
-            await blockWait();
-
-            return {
-                message: "Registered",
-                isSuccess: true,
-                employee: creat
-            }
-
-        }
-
-        else{
-            logger.info("Sent email to the employee to share wallet address");
-            var check = await app.model.Pendingemp.findOne({
-                condition: {
-                    email: email
-                }
-            });
-            if(check){
-                app.sdb.del('pendingemp', {token: check.token});
-            }
-            var jwtToken = await authJwt.getJwt(email);
-            var crea = {
-                email: email,
-                empid: uuid,
-                name: name + " " + lastName,
-                identity: identity,
-                iid: issuer.iid,
-                token: jwtToken,
-                department: req.query.department,
-                extra: extra
-            }
-            app.sdb.create("pendingemp", crea);
-            console.log("Asking address");
-
-            var mailBody = {
-                mailType: "sendAddressQuery",
-                mailOptions: {
-                    to: [crea.email],
-                    token: jwtToken,
-                    dappid: dappid
-                }
-            }
-
-            await blockWait();
-
-            mailCall.call("POST", "", mailBody, 0);
-
-            return {
-                token: jwtToken,
-                message: "Awaiting wallet address",
-                isSuccess: true
-            }
-        }
 })
 
 app.route.post("/payslips/verifyMultiple", async function(req, cb){
@@ -1181,7 +1048,7 @@ app.route.post('/registerUser/', async function(req, cb){
     var countryCode = req.query.countryCode;
     var countryId = req.query.countryId;
     var name = req.query.name;
-    var type = req.query.type;
+    var type = req.query.type || "merchant";
     var dappid = util.getDappID();
     var role = req.query.role;
     var departments = req.query.departments;

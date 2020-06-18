@@ -820,7 +820,7 @@ app.route.post('/query/employees2', async function(req){
     var query = `select employees.empid, employees.email, employees.name, employees.department, count(issues.pid) as assetCount from employees left join issues on issues.empid = employees.empid and issues.status = 'issued'${issuerFilterCondition} where employees.deleted = '0'${issuerFilterCondition2} group by employees.empid`;
 
     var total = await new Promise((resolve)=>{
-        let sql = `select count(*) from (${query});`;
+        let sql = `select count(*) as count from (${query});`;
         app.sideChainDatabase.get(sql, queryArray, (err, row)=>{
             if(err) resolve({
                 isSuccess: false,
