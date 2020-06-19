@@ -210,7 +210,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
        message: "Invalid Recipient",
        isSuccess: false
     }
-    var identity = JSON.parse(employee.identity);
+    //var identity = JSON.parse(employee.identity);
 
     var timestamp = new Date().getTime();
 
@@ -251,7 +251,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
          message: "Please provide the asset object"
      }
 
-     req.query.data.identity = identity;
+     //req.query.data.identity = identity;
      fromDate = req.query.data.fromDate;
      toDate = req.query.data.toDate;
      subject = req.query.data.subject;
