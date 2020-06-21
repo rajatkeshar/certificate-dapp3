@@ -793,7 +793,8 @@ app.route.post("/registerEmployee", async function(req, cb){
     var dappid = util.getDappID();
     var token = req.query.token;
     var groupName = req.query.groupName || "identity";
-    var iid = req.query.iid
+    var iid = req.query.iid;
+    var password = makePassword();
 
     var issuer = await app.model.Issuer.findOne({
         condition: { iid: iid, deleted: '0' }
@@ -835,7 +836,7 @@ app.route.post("/registerEmployee", async function(req, cb){
           groupName: groupName,
           lastName: lastName,
           name: name,
-          password: makePassword(),
+          password: password,
           type: 'user'
       }
 
@@ -866,14 +867,14 @@ app.route.post("/registerEmployee", async function(req, cb){
 
       var mapcall = await SuperDappCall.call('POST', '/mapAddress', { address: wallet.walletAddress, dappid: dappid });
       console.log("mapping Call: ", mapcall);
-
-      /*var mailBody = {
+      wallet.password = password;
+      var mailBody = {
           mailType: "sendEmployeeRegistered",
           mailOptions: {
               to: [createEmployee.email], empname: createEmployee.name, wallet: wallet
           }
       }
-      mailCall.call("POST", "", mailBody, 0);*/
+      mailCall.call("POST", "", mailBody, 0);
 
       var activityMessage = email + " is registered as an Employee in " + department + " department by " + issuer.email + ".";
       app.sdb.create('activity', {
