@@ -783,8 +783,8 @@ function makePassword() {
 app.route.post("/registerEmployee", async function(req, cb){
     await locker("/registerEmployee");
 
+    var email = (req.query.email)? req.query.email.toLowerCase(): null;
     var countryCode = req.query.countryCode;
-    var email = req.query.email;
     var lastName = req.query.lastName;
     var name = req.query.name;
     var uuid = req.query.empid;

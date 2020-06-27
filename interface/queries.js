@@ -857,6 +857,13 @@ app.route.post('/query/employees2', async function(req){
     }
 });
 
+app.route.post('/query/member/exists', async function(req){
+    logger.info("/query/member/exists");
+
+    let exists = await app.model.Employee.exists({email: req.query.email});
+    return {exists: exists};
+});
+
 app.route.post('/rejecteds/reasons/count', async function(req){
     logger.info("E/rejecteds/resons/count API");
 
