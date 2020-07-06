@@ -859,6 +859,7 @@ app.route.post("/registerEmployee", async function(req, cb){
           iid: issuer.iid,
           walletAddress: wallet.walletAddress,
           department: req.query.department,
+          timestamp: new Date().getTime(),
           deleted: "0",
           extra: extra
       }
@@ -905,6 +906,7 @@ app.route.post("/registerEmployee", async function(req, cb){
           iid: issuer.iid,
           token: jwtToken,
           department: req.query.department,
+	  timestamp: new Date().getTime(),
           extra: extra
       }
       app.sdb.create("pendingemp", createEmployee);

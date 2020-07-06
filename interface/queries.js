@@ -817,7 +817,7 @@ app.route.post('/query/employees2', async function(req){
         queryArray.push(req.query.iid);
     }
 
-    var query = `select employees.empid, employees.email, employees.name, employees.department, count(issues.pid) as assetCount from employees left join issues on issues.empid = employees.empid and issues.status = 'issued'${issuerFilterCondition} where employees.deleted = '0'${issuerFilterCondition2} group by employees.empid`;
+    var query = `select employees.empid, employees.email, employees.name, employees.department, employees.timestamp, count(issues.pid) as assetCount from employees left join issues on issues.empid = employees.empid and issues.status = 'issued'${issuerFilterCondition} where employees.deleted = '0'${issuerFilterCondition2} group by employees.empid`;
 
     var total = await new Promise((resolve)=>{
         let sql = `select count(*) as count from (${query});`;

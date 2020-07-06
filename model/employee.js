@@ -43,6 +43,10 @@ module.exports = {
             length: 255,
         },
         {
+            name: 'timestamp',
+            type: 'Number'
+        },
+        {
             name: 'deleted',
             type: 'String',
             length: 255,

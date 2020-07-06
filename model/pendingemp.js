@@ -41,6 +41,10 @@ module.exports = {
             name: 'department',
             type: 'String',
             length: 255
-        }
+        },
+        {
+            name: 'timestamp',
+            type: 'Number'
+        },
     ]
 }
