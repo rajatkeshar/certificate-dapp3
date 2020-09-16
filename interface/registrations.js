@@ -6,31 +6,19 @@ var logger = require("../utils/logger");
 var locker = require("../utils/locker");
 var blockWait = require("../utils/blockwait");
 var util = require("../utils/util");
-
-
-
-// // Return Payslip with empname
-// app.route.get('/payslip/:empname',  async function (req) {
-//     let result = await app.model.Payslip.findOne({
-//         condition: { empname: req.params.empname }
-//     })
-//     return result
-//   })
+var belriumJS = require('belrium-js');
+var constants = require("../utils/constants");
+var httpCall = require('../utils/httpCall');
 
 module.exports.exists = async function(req, cb){
-
     logger.info("Checking user exists on BKVS or not");
 
     var param = {
         email: req.query.email
     }
 
-    // if(!req.query.dappToken) return "Need Dapp Token, please Login";
-    // if(! (await auth.checkSession(req.query.dappToken))) return "Unauthorized Token";
-
     var response = await SwaggerCall.call('GET', '/api/v1/user/exist?email=' + param.email, param);
     return response;
-
 }
 
 app.route.post('/user/exist', module.exports.exists);
@@ -44,38 +32,7 @@ app.route.post('/userlogin', async function (req, cb) {
     };
 
     await locker('payroll.userlogin@'+req.query.email);
-
-
     var response = await BKVSCall.call('POST', `/api/v1/login`, ac_params);// Call: http://54.254.174.74:8080
-
-    // if (response.isSuccess === true){
-    //     var user = await app.model.Employer.findOne({
-    //         condition:{
-    //             email: req.query.email
-    //         }
-    //     });
-
-    //     if(!user) return "-2" // User not registered in Dapp
-
-    //     var tokenSearch = await app.model.Session.exists({
-    //         email: user.email
-    //     });
-
-    //     var token = auth.getJwt(user.email);
-
-    //     if(tokenSearch) {
-    //         app.sdb.update('session', {jwtToken: token}, {email: user.email});
-    //     }
-    //     else{
-    //         app.sdb.create('session', {
-    //             email: user.email,
-    //             jwtToken: token
-    //         })
-    //     }
-
-    //     response.dappToken = token;
-    // }
-
     return response;
 
  });
@@ -95,7 +52,7 @@ app.route.post('/userlogin', async function (req, cb) {
 
     var response = await BKVSCall.call('POST', `/api/v1/signup`, params);// Call: http://54.254.174.74:8080
     // if(response.isSuccess===true || response.status === "CONFLICT")
-
+    console.log("response: ", response);
     if(response.isSuccess===true)
     {
         // var user = await app.model.Employer.exists({
@@ -122,48 +79,44 @@ app.route.post('/userlogin', async function (req, cb) {
 
  app.route.post('/registerEmployeeToken', async function(req, cb){
      await locker("registerEmployeeToken@" + req.query.token);
-     logger.log("Entered /registerEmployeeToken API" + req.query.token);
-     var options = {
-         condition: {
-             token: req.query.token
-         }
-     }
-     console.log("token: " + options.condition.token);
-     var result = await app.model.Pendingemp.findOne(options);
 
-     if(!result) return {
-         message: "Invalid token",
-         isSuccess: false
-     }
+     var result = await app.model.Pendingemp.findOne({
+       condition: { token: req.query.token }
+     });
 
-     var mapEntryObj = {
-        address: req.query.walletAddress,
-        dappid: util.getDappID()
-    }
-    var mapcall = await SuperDappCall.call('POST', '/mapAddress', mapEntryObj);
+     if(!result) return { message: "Invalid token", isSuccess: false }
 
+     var mapcall = await SuperDappCall.call('POST', '/mapAddress', { address: req.query.walletAddress, dappid: util.getDappID() });
      delete result.token;
 
      result.walletAddress = req.query.walletAddress;
      result.deleted = '0';
-     //result.empid = app.autoID.increment('employee_max_empid');
 
-     app.sdb.create("employee", result);
+     // trnsaction flow
+     var options = {
+         fee: String(constants.fees.registerEmployee),
+         type: 1009,
+         args: JSON.stringify([result.email, result.empid, result.name, result.identity, result.iid, result.walletAddress, result.department, result.extra])
+     };
+
+     let transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
+
+     console.log("############ transaction: ", transaction);
+     let dappId = util.getDappID();
+
+     let params = {
+         transaction: transaction
+     };
+
+     console.log("registerEmployee data: ", params);
+     var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
 
      app.sdb.del('pendingemp', {email: result.email});
 
-     var activityMessage = result.email + " is registered as an Employee in " + result.department + " department.";
-    app.sdb.create('activity', {
-        activityMessage: activityMessage,
-        pid: result.email,
-        timestampp: new Date().getTime(),
-        atype: 'employee'
-    });
-
-    await blockWait();
-
+     response.message = "Student Registered";
      return {
-         isSuccess: true
+         isSuccess: true,
+         data: response
      };
  });
 

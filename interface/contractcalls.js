@@ -13,8 +13,8 @@ app.route.post("/issueTransactionCall", async function(req, res){
     await locker("issueTransactionCall@"+req.query.pid);
     logger.info("Entered /issueTransactionCall API");
     var result = await issueAsset(req);
-    if(!result.isSuccess) return result;
-    await blockWait();
+    // if(!result.isSuccess) return result;
+    // await blockWait();
     return result;
 })
 
@@ -45,65 +45,34 @@ async function issueAsset(req){
     try{
     app.sdb.lock("finalIssueAsset@"+req.query.pid);
     }catch(err){
-        return {
-            isSuccess: false,
-            message: "Same pid in a block"
-        }
+        return { isSuccess: false, message: "Same pid in a block" }
     }
     //Check the package
-    var limit = await app.model.Issuelimit.findOne({
-        condition: {
-            name: "issuelimit"
-        }
-    });
-    // if(!limit || limit.value <= 0 || limit.expirydate < new Date().getTime()) return {
-    //     isSuccess: false,
-    //     message: "No active package"
-    // }
+    var limit = await app.model.Issuelimit.findOne({ condition: { name: "issuelimit" } });
+    if(!limit || limit.value <= 0 || limit.expirydate < new Date().getTime()) return { isSuccess: false, message: "No active package" }
+
     var transactionParams = {};
     var pid = req.query.pid;
-
     var issuer = await app.model.Issuer.findOne({
-        condition: {
-            iid: req.query.iid
-        }
+        condition: { iid: req.query.iid }
     });
 
     var issue = await app.model.Issue.findOne({
-        condition: {
-            pid: pid
-        }
+        condition: { pid: pid }
     });
 
-    if(!issue) return {
-        message: "Invalid Asset",
-        isSuccess: false
-    }
+    if(!issue) return { message: "Invalid Asset", isSuccess: false }
 
-    if(issue.status === 'issued') return {
-        message: "Asset already issued",
-        isSuccess: false
-    }
+    if(issue.status === 'issued') return { message: "Asset already issued", isSuccess: false }
 
-    if(issue.status === 'pending') return {
-        message: "Asset not Authorized",
-        isSuccess: false
-    }
+    if(issue.status === 'pending') return { message: "Asset not Authorized", isSuccess: false }
 
-    if(issue.iid !== req.query.iid) return {
-        message: "Invalid issuer",
-        isSuccess: false
-    }
+    if(issue.iid !== req.query.iid) return { message: "Invalid issuer", isSuccess: false }
 
     var employee = await app.model.Employee.findOne({
-        condition: {
-            empid: issue.empid
-        }
+        condition: { empid: issue.empid }
     });
-    if(!employee) return {
-        message: "Invalid employee",
-        isSuccess: false
-    }
+    if(!employee) return { message: "Invalid employee", isSuccess: false }
 
     // if(issue.status !== "authorized") return "Payslip not authorized yet";
 
@@ -130,13 +99,8 @@ async function issueAsset(req){
 
     var mailBody = {
         mailType: "sendAssetIssued",
-        mailOptions: {
-            to: [employee.email],
-            payslip: JSON.parse(issue.data),
-            name: employee.name
-        }
+        mailOptions: { to: [employee.email], payslip: JSON.parse(issue.data), name: employee.name }
     }
-
     mailCall.call("POST", "", mailBody, 0);
 
     var activityMessage = issuer.email + " has issued payslip " + pid;

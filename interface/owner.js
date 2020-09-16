@@ -11,9 +11,11 @@ var belriumJS = require('belrium-js');
 app.route.post("/owner/verifyViewRequest", async function(req){
     console.log("############### calling verify view request: ", req.query)
 
+    if(!req.query.countryCode) return { message: "missing params countryCode" };
+
     var userDetails = await app.model.Employee.findOne({
       condition: {
-          walletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))
+          walletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode
       }
     });
 
@@ -53,7 +55,7 @@ app.route.post("/owner/verifyViewRequest", async function(req){
     let options = {
         fee: String(constants.fees.verifyViewRequest),
         type: 1007,
-        args: JSON.stringify([req.query.requesterWalletAddress, req.query.assetId])
+        args: JSON.stringify([req.query.requesterWalletAddress, req.query.assetId, req.query.countryCode])
     };
     let secret = req.query.secret;
 
@@ -76,7 +78,7 @@ app.route.post("/owner/verifyViewRequest", async function(req){
         }
     }
 
-    await blockWait();
+    //await blockWait();
 
     return response
 });

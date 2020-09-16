@@ -11,15 +11,22 @@ module.exports = {
   CRX: "http://localhost:9305/api/dapps/" + config.superdapp ,
   LSR: "http://localhost:9305/api/dapps/",
   MRI: nodeServer + "/sendMail/",
+  admin: {
+    secret: "frozen hour curious thunder relief accuse soccer region resource marine juice chicken",
+    countryCode: "IN"
+  },
   fees: {
     send: 0.001,
     inTransfer: 0.001,
     outTransfer: 0.001,
     viewRequest: 0,
     verifyViewRequest: 0,
-    updateIssueLimit: 0
+    updateIssueLimit: 0,
+    registerEmployee: 0,
+    registerPendingEmployee: 0,
+    registerUser: 0
   },
-    centralServerHash: config.centralServerHash,
+  centralServerHash: config.centralServerHash,
   links: {
     verifyLink: config.centralServer + "/payroll_structured/Views/Verify/verify.html",
     registerEmp: config.centralServer + "/payroll_structured/Token_generator/token.html",

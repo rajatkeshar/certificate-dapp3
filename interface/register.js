@@ -788,8 +788,8 @@ app.route.post("/registerEmployee", async function(req, cb){
     var lastName = req.query.lastName;
     var name = req.query.name;
     var uuid = req.query.empid;
-    var extra = JSON.stringify(req.query.extra);
-    var identity = JSON.stringify(req.query.identity);
+    var extra = (req.query.extra)? JSON.stringify(req.query.extra): null;
+    var identity = (req.query.identity)? JSON.stringify(req.query.identity): null;
     var dappid = util.getDappID();
     var token = req.query.token;
     var groupName = req.query.groupName || "identity";
@@ -815,7 +815,6 @@ app.route.post("/registerEmployee", async function(req, cb){
     if(!issuerDepartment) return { isSuccess: false, message: "Issuer can only register employees in his departments" }
 
     var identityEmpCheck = await app.model.Employee.exists({
-      identity: identity,
       email: email,
       empid: uuid,
       deleted: '0'
@@ -825,9 +824,8 @@ app.route.post("/registerEmployee", async function(req, cb){
 
     var request = { query: { email: email } }
     var response = await registrations.exists(request, 0);
-
     if(response.isSuccess == false) {
-      logger.info("Registering the Recipient on BKVS", token);
+      console.log("Registering the Recipient on BKVS", token);
       if(token === "0" || token ==="-1") return "Error in retrieving token";
 
       var options = {
@@ -851,75 +849,77 @@ app.route.post("/registerEmployee", async function(req, cb){
       console.log("BKBS Registration response is complete with response: " + JSON.stringify(response));
 
       var wallet = response.data;
-      var createEmployee = {
-          email: email,
-          empid: uuid,
-          name: name + " " +lastName,
-          identity: identity,
-          iid: issuer.iid,
-          walletAddress: wallet.walletAddress,
-          department: req.query.department,
-          timestamp: new Date().getTime(),
-          deleted: "0",
-          extra: extra
-      }
-
-      app.sdb.create('employee', createEmployee);
-
+      var fullName = name + " " +lastName;
       var mapcall = await SuperDappCall.call('POST', '/mapAddress', { address: wallet.walletAddress, dappid: dappid });
       console.log("mapping Call: ", mapcall);
-      wallet.password = password;
-      var mailBody = {
-          mailType: "sendEmployeeRegistered",
-          mailOptions: {
-              to: [createEmployee.email], empname: createEmployee.name, wallet: wallet
-          }
+
+      // trnsaction flow
+      var options = {
+          fee: String(constants.fees.registerEmployee),
+          type: 1009,
+          args: JSON.stringify([email, uuid, fullName, identity, issuer.iid, wallet.walletAddress, req.query.department, extra])
+      };
+
+      let transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
+
+      console.log("############ transaction: ", transaction);
+      let dappId = util.getDappID();
+
+      let params = {
+          transaction: transaction
+      };
+
+      console.log("registerEmployee data: ", params);
+      var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+      if(response && response.success) {
+        wallet.password = password;
+        var mailBody = {
+            mailType: "sendEmployeeRegistered",
+            mailOptions: {
+                to: [email], empname: fullName, wallet: wallet
+            }
+        }
+        mailCall.call("POST", "", mailBody, 0);
       }
-      mailCall.call("POST", "", mailBody, 0);
 
-      var activityMessage = email + " is registered as an Employee in " + department + " department by " + issuer.email + ".";
-      app.sdb.create('activity', {
-        activityMessage: activityMessage,
-        pid: email,
-        timestampp: new Date().getTime(),
-        atype: 'employee'
-      });
-
-      await blockWait();
-
-      return { message: "Student Registered", isSuccess: true, employee: createEmployee }
+      response.message = "Student Registered";
+      return response;
 
     } else {
-      logger.info("Sent email to the employee to share wallet address");
-      var check = await app.model.Pendingemp.findOne({
-            condition: { email: email }
-      });
-      if(check){
-          app.sdb.del('pendingemp', {token: check.token});
-      }
+      var fullName = name + " " + lastName;
       var jwtToken = await authJwt.getJwt(email);
-      var createEmployee = {
-          email: email,
-          empid: uuid,
-          name: name + " " + lastName,
-          identity: identity,
-          iid: issuer.iid,
-          token: jwtToken,
-          department: req.query.department,
-	  timestamp: new Date().getTime(),
-          extra: extra
-      }
-      app.sdb.create("pendingemp", createEmployee);
-      console.log("send mail to register wallet address");
 
-      var mailBody = {
-          mailType: "sendAddressQuery",
-          mailOptions: { to: [createEmployee.email], token: jwtToken, dappid: dappid }
-      }
-      mailCall.call("POST", "", mailBody, 0);
-      await blockWait();
+      // transaction flow
+      var options = {
+          fee: String(constants.fees.registerPendingEmployee),
+          type: 1010,
+          args: JSON.stringify([email, uuid, fullName, identity, issuer.iid, jwtToken, req.query.department, extra])
+      };
 
-      return { token: jwtToken, message: "Awaiting wallet address", isSuccess: true }
+      let transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
+
+      console.log("############ transaction: ", transaction);
+      let dappId = util.getDappID();
+
+      let params = {
+          transaction: transaction
+      };
+
+      console.log("registerEmployee data: ", params);
+      var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+      if(response && response.success) {
+        var mailBody = {
+            mailType: "sendAddressQuery",
+            mailOptions: { to: [email], token: jwtToken, dappid: dappid }
+        }
+        mailCall.call("POST", "", mailBody, 0);
+      }
+      response.message = "Student Registered";
+      response.message = "Awaiting wallet address"
+      response.token = jwtToken;
+      return response;
     }
 })
 
@@ -1027,27 +1027,10 @@ app.route.post('/issuer/issuedPayslips', async function(req, cb){
     }
 })
 
-function makePassword() {
-    var text = "";
-    var caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    var smalls = "abcdefghijklmnopqrstuvwxyz";
-    var symbols = "!@$";
-    var numbers = "1234567890";
-
-    for (var i = 0; i < 3; i++){
-    text += caps.charAt(Math.floor(Math.random() * caps.length));
-    text += smalls.charAt(Math.floor(Math.random() * smalls.length));
-    text += symbols.charAt(Math.floor(Math.random() * symbols.length));
-    text += numbers.charAt(Math.floor(Math.random() * numbers.length));
-    }
-    return text;
-}
-
 app.route.post('/registerUser/', async function(req, cb){
-    await locker("registerUser@" + role);
+    //await locker("registerUser@" + role);
 
-
-    var email = req.query.email;
+    var email = (req.query.email)? req.query.email.toLowerCase(): null
     var countryCode = req.query.countryCode;
     var countryId = req.query.countryId;
     var name = req.query.name;
@@ -1056,191 +1039,117 @@ app.route.post('/registerUser/', async function(req, cb){
     var role = req.query.role;
     var departments = req.query.departments;
 
-        logger.info("Entered registerUser with email: " + email + " and role: " + role + "and dappid: " + dappid);
-        console.log("Entered Register User");
+    logger.info("Entered registerUser with email: " + email + " and role: " + role + "and dappid: " + dappid);
+    console.log("Entered Register User");
 
-        switch(role){
-            case "issuer":
-                result = await app.model.Issuer.exists({
-                    email: email,
-                    deleted: '0'
-                });
-                break;
+    switch(role){
+        case "issuer":
+            result = await app.model.Issuer.exists({ email: email, deleted: '0' });
+            break;
+        case "authorizer":
+            result = await app.model.Authorizer.exists({ email: email, deleted: '0' });
+            break;
+        default:
+            return { message: "Invalid role", isSuccess: false }
+    }
 
-            case "authorizer":
-                result = await app.model.Authorizer.exists({
-                    email: email,
-                    deleted: '0'
-                });
-                break;
+    if(result) return { message: "User already registered", isSuccess: false };
+    if(role === 'issuer' && !departments) return { isSuccess: false, message: "Please define atleast one department for the user" };
 
-            default:
-                    logger.error("Invalid role");
-                    return {
-                        message: "Invalid role",
-                        isSuccess: false
-                    }
+    for(let i in departments) {
+        console.log("departments[i]: ", departments[i]);
+        let department = await app.model.Department.findOne({ condition: { name: departments[i].name } });
+        if(!department) return { isSuccess: false, message: "Invalid department" }
+
+        departments[i].did = department.did
+        if(role === 'authorizer') {
+            if(!departments[i].level) return { isSuccess: false, message: "Need to provide a level for authorizer" };
+            if(departments[i].level <= 0 || departments[i].level > department.levels) return { isSuccess: false, message: "Provide valid levels for that department" };
         }
+    }
 
-        if(result){
-            logger.error("User already registered");
-            return {
-                message: "User already registered",
-                isSuccess: false
-            }
-        }
-
-        if(role === 'issuer' && !departments) return {
-            isSuccess: false,
-            message: "Please define atleast one department for the user"
-        }
-
-        for(let i in departments){
-            console.log("departments[i]: ", departments[i]);
-            let department = await app.model.Department.findOne({
-                condition: {
-                    name: departments[i].name
-                }
-            });
-            console.log("department: ", department);
-            if(!department) return {
-                isSuccess: false,
-                message: "Invalid department"
-            }
-            departments[i].did = department.did
-            if(role === 'authorizer') {
-                if(!departments[i].level) return {
-                    isSuccess: false,
-                    message: "Need to provide a level for authorizer"
-                }
-                if(departments[i].level <= 0 || departments[i].level > department.levels) return {
-                    isSuccess: false,
-                    message: "Provide valid levels for that department"
-                }
-            }
-        }
-
+    var response = await registrations.exists({ query: { email: email } }, 0);
+    console.log("Register new User in BKBS");
+    if(!response.isSuccess){
         var request = {
             query: {
-                email: email
+                countryId:countryId,
+                countryCode:countryCode,
+                email:email,
+                name:name,
+                password:makePassword(),
+                type:type
             }
         }
-        var response = await registrations.exists(request, 0);
-
-        if(!response.isSuccess){
-            var request = {
-                query: {
-                    countryId:countryId,
-                    countryCode:countryCode,
-                    email:email,
-                    name:name,
-                    password:makePassword(),
-                    type:type
-                }
-            }
-            var resultt = await registrations.signup(request, 0);
-            if(resultt !== "success") return {
-                message: JSON.stringify(resultt),
-                isSuccess: false
-            }
-
-            var wallet = {
-                password: request.query.password
-            }
-
-            var mailBody = {
-                mailType: "sendRegistered",
-                mailOptions: {
-                    to: [email],
-                    empname: name,
-                    wallet: wallet
-                }
-            }
-            mailCall.call("POST", "", mailBody, 0);
-
-            logger.info("Registered a new user");
+        var resultt = await registrations.signup(request, 0);
+        if(resultt !== "success") return { message: JSON.stringify(resultt), isSuccess: false }
+        console.log("##########resultt: ", resultt);
+        var wallet = {
+            password: request.query.password
         }
 
-        var mapObj = {
-            email: email,
-            dappid: dappid,
-            role: role
+        var mailBody = {
+            mailType: "sendRegistered",
+            mailOptions: { to: [email], empname: name, wallet: wallet }
         }
-        var mapcall = await SuperDappCall.call('POST', "/mapUser", mapObj);
-        // Need some exception handling flow for the case when a email with a particular role is already registered on the dapp.
-        if(!mapcall.isSuccess) return mapcall;
+        mailCall.call("POST", "", mailBody, 0);
+    }
 
-        var returnObj = {
-            isSuccess: true
+    var mapObj = { email: email, dappid: dappid, role: role };
+    var mapcall = await SuperDappCall.call('POST', "/mapUser", mapObj);
+    // Need some exception handling flow for the case when a email with a particular role is already registered on the dapp.
+    if(!mapcall.isSuccess) return mapcall;
+
+    var returnObj = { isSuccess: true };
+    var timestampp = new Date().getTime();
+    switch(role){
+        case "issuer":
+          //getting the registered id of an issuer
+          var genId = app.autoID.increment('issuer_max_iid');
+          // transaction flow
+          var options = {
+              fee: String(constants.fees.registerUser),
+              type: 1011,
+              args: JSON.stringify([email, genId, departments, timestampp])
+          };
+          var transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
+          console.log("############ transaction: ", transaction);
+          var dappId = util.getDappID();
+          var params = { transaction: transaction };
+
+          console.log("registerIssuer data: ", params);
+          var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+        break;
+
+        case "authorizer":
+          //getting the registered id of an authorizer
+          var genId = app.autoID.increment('authorizer_max_aid');
+          // transaction flow
+          var options = {
+              fee: String(constants.fees.registerUser),
+              type: 1012,
+              args: JSON.stringify([email, genId, timestampp])
+          };
+          var transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
+          console.log("############ transaction: ", transaction);
+          var dappId = util.getDappID();
+          var params = { transaction: transaction };
+
+          console.log("registerAuthorizer data: ", params);
+          var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+          break;
+        default: return { message: "Invalid role", isSuccess: false }
+    }
+
+    if(response.success){
+        var mailBody = {
+            mailType: "sendWelcome",
+            mailOptions: { to: [email], name: name, role: role }
         }
-
-        var timestampp = new Date().getTime();
-        switch(role){
-
-            case "issuer":
-            //getting the last registered id of an issuer
-                app.sdb.create('issuer', {
-                    iid: app.autoID.increment('issuer_max_iid'),
-                    publickey: "-",
-                    email: email,
-                    timestampp: timestampp,
-                    deleted: "0"
-                });
-                logger.info("Created an issuer");
-                //Registering the issuer in the given departments
-                iid = app.autoID.get('issuer_max_iid')
-                for(let i in departments) {
-                    app.sdb.create('issudept', {
-                        iid: iid,
-                        did: departments[i].did,
-                        deleted: '0'
-                    });
-                }
-                returnObj.iid = iid;
-                break;
-
-            case "authorizer":
-                app.sdb.create('authorizer', {
-                    aid: app.autoID.increment('authorizer_max_aid'),
-                    publickey: "-",
-                    email: email,
-                    timestampp: timestampp,
-                    deleted: "0"
-                });
-                logger.info("Created an authorizer");
-                //Registering the authorizer in the given departments
-                aid = app.autoID.get('authorizer_max_aid')
-                returnObj.aid = aid;
-                break;
-            default: return {
-                message: "Invalid role",
-                isSuccess: false
-            }
-        }
-
-        if(response.isSuccess){
-            var mailBody = {
-                mailType: "sendWelcome",
-                mailOptions: {
-                    to: [email],
-                    name: name,
-                    role: role
-                }
-            }
-            mailCall.call("POST", "", mailBody, 0);
-        }
-
-        var activityMessage = email + " is registered as an " + role;
-        app.sdb.create('activity', {
-            activityMessage: activityMessage,
-            pid: email,
-            timestampp: timestampp,
-            atype: role
-        });
-
-        await blockWait();
-
-        return returnObj;
+        mailCall.call("POST", "", mailBody, 0);
+    }
+    response.id = genId;
+    return response;
 });
 
 app.route.post('/department/assignAuthorizers', async function(req, cb){

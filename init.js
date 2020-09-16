@@ -39,6 +39,26 @@ module.exports = async function () {
             type: 1008,
             name: "Update Issue Limit",
             location: 'payroll.updateIssueLimit'
+        },
+        registerEmployee: {
+            type: 1009,
+            name: "Register Employee",
+            location: 'register.registerEmployee'
+        },
+        registerPendingEmployee: {
+            type: 1010,
+            name: "Register Pending Employee",
+            location: 'register.registerPendingEmployee'
+        },
+        registerIssuer: {
+            type: 1011,
+            name: "Register Issuer",
+            location: 'register.registerIssuer'
+        },
+        registerAuthorizer: {
+            type: 1012,
+            name: "Register Authorizer",
+            location: 'register.registerAuthorizer'
         }
     }
     for(i in contractObjects){

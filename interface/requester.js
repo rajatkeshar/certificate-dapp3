@@ -12,89 +12,51 @@ var _ = require("lodash");
 app.route.post("/requester/viewRequest", async function(req){
     console.log("############### calling view request: ", req.query)
 
-    try{
-    app.sdb.lock("viewRequest@"+req.query.assetId);
-    }catch(err){
-        return {
-            message: "Same process in a block"
-        }
-    }
+    if(!req.query.countryCode) return { message: "missing params countryCode" };
 
-    var issuedCert = await app.model.Issue.findOne({
-      condition: {
-          transactionId: req.query.assetId
-      }
-    });
+    //try { app.sdb.lock("viewRequest@"+req.query.assetId);} catch(err){ return { message: "Same process in a block" } }
 
-    if(!issuedCert) {
-      return {
-          message: "Asset does not exist"
-      }
-    }
-    var employee = await app.model.Employee.findOne({
-      condition: { empid: issuedCert.empid }
-    });
-    if(employee.walletAddress == address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))) {
-      return {
-        message: "You can not make view request on own asset"
-      }
-    }
+    var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
+    if(!issuedCert) return { message: "Asset does not exist" }
+
+    var employee = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid }});
+    if(employee.walletAddress == address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))) return { message: "You can not make view request on own asset"}
     console.log("address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)): ", address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)));
+
     var requester = await app.model.Requester.findOne({
         condition: {
             assetId: req.query.assetId,
-            requesterWalletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))
+            requesterWalletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode
         }
     });
     console.log("################### requester: ", requester)
-    if(requester && requester.ownerStatus.bool() && requester.issuerStatus.bool()) {
-        return {
-          message: "Request Already Authorized"
-        }
-    }
+    if(requester && requester.ownerStatus.bool() && requester.issuerStatus.bool()) return { message: "Request Already Authorized" }
 
-    if(requester && !requester.ownerStatus.bool()) {
-        return {
-          message: "Already Requested"
-        }
-    }
+    if(requester && !requester.ownerStatus.bool()) return { message: "Already Requested" }
 
-    if(requester && requester.ownerStatus.bool() && !requester.issuerStatus.bool()) {
-        return {
-          message: "Request Pending From issuer End."
-        }
-    }
-
-    console.log("constants.fees.viewRequest: ", constants.fees.viewRequest);
+    if(requester && requester.ownerStatus.bool() && !requester.issuerStatus.bool()) return { message: "Request Pending From issuer End." }
 
     let options = {
         fee: String(constants.fees.viewRequest),
         type: 1005,
-        args: JSON.stringify([req.query.assetId])
+        args: JSON.stringify([req.query.assetId, req.query.countryCode])
     };
     let secret = req.query.secret;
-
     let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
-
-    console.log("############ transaction: ", transaction);
     let dappId = util.getDappID();
 
     let params = {
         transaction: transaction
     };
 
-    console.log("registerResult data: ", params);
+    console.log("view request data: ", params);
     var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
 
-    console.log("@@@@@@@@@@@@@@@@@@@@@@@ response: ", response);
     if(!response.success){
         return {
             message: JSON.stringify(response)
         }
     }
-
-    await blockWait();
-
     return response
 });
 

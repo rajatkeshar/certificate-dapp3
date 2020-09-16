@@ -9,14 +9,7 @@ var belriumJS = require('belrium-js');
 
 app.route.post("/issuer/verifyViewRequest", async function(req){
     console.log("############### calling verify view request: ", req.query)
-
-    try{
-    app.sdb.lock("verifyViewRequest@"+req.query.assetId);
-    }catch(err){
-        return {
-            message: "Same process in a block"
-        }
-    }
+    if(!req.query.countryCode) return { message: "missing params countryCode" };
 
     var issuerDetails = await app.model.Issuer.findOne({
       condition: {
@@ -66,7 +59,7 @@ app.route.post("/issuer/verifyViewRequest", async function(req){
     let options = {
         fee: String(constants.fees.verifyViewRequest),
         type: 1006,
-        args: JSON.stringify([req.query.requesterWalletAddress, req.query.assetId])
+        args: JSON.stringify([req.query.requesterWalletAddress, req.query.assetId, req.query.countryCode])
     };
     let secret = req.query.secret;
 
@@ -89,7 +82,7 @@ app.route.post("/issuer/verifyViewRequest", async function(req){
         }
     }
 
-    await blockWait();
+    //await blockWait();
 
     return response
 });

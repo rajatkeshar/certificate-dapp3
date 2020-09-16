@@ -191,7 +191,7 @@ app.route.post('/authorizers', async function(req, cb){
             departmentArray.push(department.name);
         }
         authorizers[i].departments = departmentArray;
-        
+
         authorizers[i].signedCount = signedCount;
         authorizers[i].rejectedCount = rejectedCount;
     }
@@ -291,7 +291,7 @@ app.route.post('/authorizers/statistics', async function(req, cb){
 //         condition: condition
 //     });
 
-//     var array = []; 
+//     var array = [];
 //     var total = 0;
 //     var iterator = 0;
 //     if(!req.query.limit) req.query.limit = Number.POSITIVE_INFINITY;
@@ -344,7 +344,7 @@ app.route.post('/issuer/statistic', async function(req, cb){
     var employeesRegistered = await app.model.Employee.count({
         iid: req.query.iid
     });
-    
+
     var result = await app.model.Employee.findAll({
         condition: {
             iid: req.query.iid,
@@ -566,24 +566,6 @@ app.route.post('/authorizers/remove', async function(req, cb){
         });
     }
 
-    // var departments = await app.model.Authdept.findAll({
-    //     condition: {
-    //         aid: check.aid,
-    //         deleted: '0'
-    //     },
-    //     fields: ['did']
-    // });
-
-    // for(i in departments){
-    //     let levels = await app.model.Department.findOne({
-    //         condition: {
-    //             did: departments[i].did
-    //         },
-    //         fields: ['levels']
-    //     });
-    //     app.sdb.update('department', {levels: levels.levels - 1}, {did: departments[i].did});
-    // }
-
     app.sdb.update('authdept', {deleted: '1'}, {aid: check.aid});
     app.sdb.update('authorizer', {deleted: '1'}, {aid: check.aid});
 
@@ -640,7 +622,7 @@ app.route.post('/issuers/remove', async function(req, cb){
     }
 
     app.sdb.update('issudept', {deleted: '1'}, {iid: check.iid});
-    
+
     app.sdb.update('issuer', {deleted: '1'}, {iid: check.iid});
 
     var activityMessage = "Issuer " + check.email + " has been removed.";
@@ -732,7 +714,7 @@ app.route.post('/customFields/define', async function(req, cb){
 
     if(setting){
        app.sdb.update('setting', {fields: fields}, {id: '0'});
-       app.sdb.update('setting', {identity: identity}, {id: '0'}); 
+       app.sdb.update('setting', {identity: identity}, {id: '0'});
     }
     else{
         app.sdb.create('setting', {
@@ -1087,7 +1069,7 @@ app.route.post('/getBanks', async function(req, cb){
     for(i in banks){
         bankSet.add(banks[i].bank)
     }
-    
+
     return {
         banks: Array.from(bankSet),
         isSuccess: true
@@ -1291,7 +1273,7 @@ app.route.post('/department/assets', async function(req){
         }
         else{
             limits.first = util.getMilliSecondLimits(1, req.query.year).first;
-            limits.last = util.getMilliSecondLimits(12, req.query.year).last;                                              
+            limits.last = util.getMilliSecondLimits(12, req.query.year).last;
         }
         condition.timestampp = {
             $between: [limits.first, limits.last]
@@ -1300,10 +1282,10 @@ app.route.post('/department/assets', async function(req){
     if(req.query.iid){
         condition.iid = req.query.iid
     }
-    
+
     var total = await app.model.Issue.count(condition);
     var issues = await app.model.Issue.findAll({
-        condition: condition,  
+        condition: condition,
         sort: {
             timestampp: -1
         },
@@ -1388,7 +1370,7 @@ app.route.post('/issues/rejected/reasons', async function(req, cb){
     for(i in reasons){
         reasonSet.add(reasons[i].reason)
     }
-    
+
     return {
         reasons: Array.from(reasonSet),
         isSuccess: true
