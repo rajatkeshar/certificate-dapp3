@@ -35,6 +35,16 @@ module.exports = {
             name: 'trsId',
             type: 'String',
             length: 255,
+        },
+        {
+            name: 'initBy',
+            type: 'String',
+            length: 20,
+        },
+        {
+            name: 'isAuthorizeByIssuer',
+            type: 'Boolean',
+            default: false,
         }
     ]
 }

@@ -83,17 +83,59 @@ app.route.post("/owner/verifyViewRequest", async function(req){
     return response
 });
 
+app.route.post("/owner/grant/asset", async function(req){
+    console.log("############### calling verify view request: ", req.query)
+
+    if(!req.query.countryCode) return { message: "missing params countryCode" };
+    var ownerWalletAddress = address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode.toUpperCase();
+    var userDetails = await app.model.Employee.findOne({ condition: { walletAddress: ownerWalletAddress } });
+    if(!userDetails) { return { message: "Owner not found" } }
+
+    var issuedCert = await app.model.Issue.findOne({ condition: { empid: userDetails.empid, transactionId: req.query.assetId} }); // transaction id in issue table is assetId
+    if(!issuedCert) { return { message: "Asset does not exist" } }
+
+    var viewerDetails = await app.model.Employee.findOne({ condition: { email: req.query.viewerEmail }});
+    var requesterWalletAddress = viewerDetails.walletAddress;
+
+    var checkGranted = await app.model.Requester.findOne({ condition: { assetId: req.query.assetId, requesterWalletAddress: viewerDetails.walletAddress, ownerWalletAddress: ownerWalletAddress } });
+    if(checkGranted && checkGranted.ownerStatus.bool()) { return { message: "Request Already granted" } };
+
+    let options = {
+        fee: String(constants.fees.verifyViewRequest),
+        type: 1013,
+        args: JSON.stringify([requesterWalletAddress, req.query.assetId, req.query.countryCode])
+    };
+    let secret = req.query.secret;
+    let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
+    let dappId = util.getDappID();
+
+    console.log("############ transaction: ", transaction);
+    let params = {
+        transaction: transaction
+    };
+
+    console.log("registerResult data: ", params);
+    var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+    console.log("@@@@@@@@@@@@@@@@@@@@@@@ response: ", response);
+    if(!response.success) { return { message: JSON.stringify(response) } }
+
+    return response
+});
+
 app.route.post("/owner/track/assets/status", async function(req) {
   var owner = await app.model.Employee.findOne({
     condition: { email: req.query.email }
   });
-  if(!owner) {
+  if(!owner || owner.length == 0) {
     return {message: "owner not found"}
   }
   var issue = await app.model.Issue.findAll({
     condition: { empid: owner.empid }
   });
-
+  if(!issue || issue.length == 0) {
+    return {message: "asset not found"}
+  }
   await new Promise((resolve, reject) => {
     data = [];
     issue.map(async(obj, index) => {

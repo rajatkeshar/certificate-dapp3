@@ -59,6 +59,16 @@ module.exports = async function () {
             type: 1012,
             name: "Register Authorizer",
             location: 'register.registerAuthorizer'
+        },
+        ownerGrantAsset: {
+          type: 1013,
+          name: "Owner Grant Asset",
+          location: 'owner.ownerGrantAsset'
+        },
+        authorizeByIssuer: {
+          type: 1014,
+          name: "Authorized By Issuer On Demand",
+          location: 'requester.authorizeByIssuer'
         }
     }
     for(i in contractObjects){

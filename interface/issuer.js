@@ -106,7 +106,7 @@ app.route.post("/issuer/track/assets/status", async function(req) {
   var issue = await app.model.Issue.findAll({
     condition: { iid: issuer.iid }
   });
-  console.log("issue: ", issue);
+
   await new Promise((resolve, reject) => {
     data = [];
     issue.map(async(obj, index) => {
@@ -114,12 +114,14 @@ app.route.post("/issuer/track/assets/status", async function(req) {
         condition: {
             assetId: obj.transactionId,
             ownerStatus: "true",
-            issuerStatus: "false",
+            issuerStatus: "false"
         }
       });
 
       requester.forEach((item, i) => {
-        data.push(item);
+        if(item.initBy === "requester" || item.isAuthorizeByIssuer == "true") {
+          data.push(item);
+        }
       });
 
       if(index == issue.length-1) {
@@ -156,7 +158,6 @@ app.route.post("/issuer/track/assets/status", async function(req) {
     })
   })
 
-  console.log("data: ", data);
   return {
       message: "Asset list",
       data: data

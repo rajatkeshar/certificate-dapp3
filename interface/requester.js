@@ -60,6 +60,37 @@ app.route.post("/requester/viewRequest", async function(req){
     return response
 });
 
+app.route.post("/requester/authorizeby/issuer", async function(req){
+    console.log("############### calling view request: ", req.query)
+
+    if(!req.query.countryCode) return { message: "missing params countryCode" };
+
+    var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
+    if(!issuedCert) return { message: "Asset does not exist" }
+
+    var requester = await app.model.Requester.findOne({ condition: { assetId: req.query.assetId, requesterWalletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode } });
+    if(requester && requester.ownerStatus.bool() && requester.isAuthorizeByIssuer.bool()) return { message: "Request Already processed" }
+
+    let options = {
+        fee: String(constants.fees.viewRequest),
+        type: 1014,
+        args: JSON.stringify([req.query.assetId, req.query.countryCode])
+    };
+    let secret = req.query.secret;
+    let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
+    let dappId = util.getDappID();
+
+    let params = { transaction: transaction };
+
+    console.log("view request data: ", params);
+    var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+    if(!response.success){
+        return { message: JSON.stringify(response) }
+    }
+    return response
+});
+
 app.route.get("/requester/list/assets", async function(req) {
     var data = [];
     var issuedCert = await app.model.Issue.findAll({
@@ -77,16 +108,9 @@ app.route.get("/requester/list/assets", async function(req) {
 });
 
 app.route.post("/requester/track/assets/status", async function(req) {
-    var requester = await app.model.Requester.findAll({
-      condition: {
-          requesterWalletAddress: req.query.address
-      }
-    });
-
-    if(!requester) {
-        return { message: "No details found" }
-    }
-
+    var requester = await app.model.Requester.findAll({ condition: { requesterWalletAddress: req.query.address } });
+    console.log("requester: ", requester);
+    if(!requester || requester.length == 0) { return { message: "No details found" } }
     await new Promise((resolve, reject) => {
       requester.map(async(obj, index) => {
         var issue = await app.model.Issue.findOne({
@@ -124,51 +148,6 @@ app.route.post("/requester/track/assets/status", async function(req) {
     }
 });
 
-app.route.post("/requester/track/assets/status", async function(req) {
-    var requester = await app.model.Requester.findAll({
-      condition: {
-          requesterWalletAddress: req.query.address
-      }
-    });
-
-    if(!requester) {
-        return { message: "No details found" }
-    }
-
-    await new Promise((resolve, reject) => {
-      requester.map(async(obj, index) => {
-        var issue = await app.model.Issue.findOne({
-          condition: { transactionId: obj.assetId }
-        });
-        var issuer = await app.model.Issuer.findOne({
-          condition: { iid: issue.iid }
-        });
-        var owner = await app.model.Employee.findOne({
-          condition: { empid: issue.empid }
-        });
-        if(owner) {
-          requester[index].owner = {
-            name: owner.name,
-            email: owner.email,
-            department: owner.department
-          }
-        }
-        if(issuer) {
-          requester[index].issuer = {
-            email: issuer.email
-          }
-        }
-        if(index == requester.length-1) {
-            resolve();
-        }
-      })
-    })
-
-    return {
-        message: "Asset list",
-        data: requester
-    }
-});
 app.route.post("/requester/asset/get", async function(req) {
     console.log("############### calling list asset request: ", req.query.assetId)
 
@@ -178,7 +157,7 @@ app.route.post("/requester/asset/get", async function(req) {
           requesterWalletAddress: req.query.address
       }
     });
-
+    console.log("requester: ", requester);
     if(!requester) {
         return {
           message: "No details found"
@@ -190,8 +169,8 @@ app.route.post("/requester/asset/get", async function(req) {
         message: "You Are Not Authorized To View This Asset, Pending From Owner End"
       }
     }
-
-    if(!requester.issuerStatus.bool()) {
+    
+    if(!requester.issuerStatus.bool() && requester.isAuthorizeByIssuer.bool()) {
       return {
         message: "You Are Not Authorized To View This Asset, Pending From Issuer End"
       }
