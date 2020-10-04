@@ -97,12 +97,18 @@ async function issueAsset(req){
         }
     }
 
+    //var employee = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
     var mailBody = {
-        mailType: "sendAssetIssued",
-        mailOptions: { to: [employee.email], payslip: JSON.parse(issue.data), name: employee.name }
+        mailType: "issueCertificate",
+        mailOptions: {
+            userEmail: employee.email,
+            //authoriserEmail: checkauth.email,
+            issuerEmail: issuer.email,
+            name: issue.data.degree,
+            assetId: pid
+        }
     }
     mailCall.call("POST", "", mailBody, 0);
-
     var activityMessage = issuer.email + " has issued payslip " + pid;
     app.sdb.create('activity', {
         activityMessage: activityMessage,

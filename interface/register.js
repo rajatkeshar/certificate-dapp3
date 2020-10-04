@@ -194,97 +194,46 @@ app.route.post('/payslip/confirmedIssues',async function(req,cb){
 })
 
 app.route.post('/payslip/initialIssue',async function(req,cb){
-
     await locker("/payslip/initialIssue");
-
     logger.info("Entered /payslip/initialIssue API");
-
     // Check Employee
-    var employee = await app.model.Employee.findOne({
-        condition: {
-           empid: req.query.empid,
-           deleted: "0"
-        }
-   });
-   if(!employee) return {
-       message: "Invalid Recipient",
-       isSuccess: false
-    }
-    //var identity = JSON.parse(employee.identity);
-
+    var employee = await app.model.Employee.findOne({ condition: { empid: req.query.empid, deleted: "0" } });
+    if(!employee) return { message: "Invalid Recipient", isSuccess: false }
     var timestamp = new Date().getTime();
 
      issuerid=req.query.issuerid;
      secret=req.query.secret;
      var publickey = util.getPublicKey(secret);
-     var issuer = await app.model.Issuer.findOne({
-         condition:{
-             iid: req.query.issuerid,
-             deleted: "0"
-         }
-     });
-     if(!issuer) return {
-         message: "Invalid Issuer",
-         isSuccess: false
-     }
-     var department = await app.model.Department.findOne({
-         condition: {
-             name: employee.department
-         }
-     });
+     var issuer = await app.model.Issuer.findOne({ condition:{ iid: req.query.issuerid, deleted: "0" } });
+     if(!issuer) return { message: "Invalid Issuer", isSuccess: false }
 
-     var issuerDepartmentExists = await app.model.Issudept.findOne({
-         condition: {
-             iid: issuer.iid,
-             did: department.did,
-             deleted: '0'
-         }
-     });
+     var department = await app.model.Department.findOne({ condition: { name: employee.department } });
+     var issuerDepartmentExists = await app.model.Issudept.findOne({ condition: { iid: issuer.iid, did: department.did, deleted: '0' } });
 
-     if(!issuerDepartmentExists) return {
-         isSuccess: false,
-         message: "Issuer and recipient department doesn't match"
-     }
-
-     if(!req.query.data) return {
-         isSuccess: false,
-         message: "Please provide the asset object"
-     }
+     if(!issuerDepartmentExists) return { isSuccess: false, message: "Issuer and recipient department doesn't match" }
+     if(!req.query.data) return { isSuccess: false, message: "Please provide the asset object" }
 
      //req.query.data.identity = identity;
      fromDate = req.query.data.fromDate;
      toDate = req.query.data.toDate;
      subject = req.query.data.subject;
 
-     if(!fromDate) {
-       return { isSuccess: false, message: "missing params: #fromDate"};
-     }
-     if(!toDate) {
-       return { isSuccess: false, message: "missing params: #toDate"};
-     }
-     if(!subject) {
-       return { isSuccess: false, message: "missing params: #subject"};
-     }
-    // Check Payslip already issued
+     if(!fromDate) { return { isSuccess: false, message: "missing params: #fromDate"}; }
+     if(!toDate) { return { isSuccess: false, message: "missing params: #toDate"}; }
+     if(!subject) { return { isSuccess: false, message: "missing params: #subject"}; }
+     // Check Payslip already issued
 
-    var payslipString = JSON.stringify(req.query.data);
+     var payslipString = JSON.stringify(req.query.data);
 
-    var duplicateCheck = await app.model.Issue.findOne({
-        condition: {
-            data: payslipString
-        }
-    });
-    if(duplicateCheck) return {
-        isSuccess: false,
-        message: "An issue with the same details already exists with ID: " + duplicateCheck.pid
-    }
+     var duplicateCheck = await app.model.Issue.findOne({ condition: { data: payslipString } });
+     if(duplicateCheck) return { isSuccess: false, message: "An issue with the same details already exists with ID: " + duplicateCheck.pid }
 
-    var hash = util.getHash(payslipString);
-    var sign = util.getSignatureByHash(hash, secret);
-    var base64hash = hash.toString('base64');
-    var base64sign = sign.toString('base64');
+     var hash = util.getHash(payslipString);
+     var sign = util.getSignatureByHash(hash, secret);
+     var base64hash = hash.toString('base64');
+     var base64sign = sign.toString('base64');
 
-    var issue = {
+     var issue = {
         pid:String(Number(app.autoID.get('issue_max_pid')) + 1),
         iid:issuerid,
         hash: base64hash,
@@ -295,9 +244,9 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
         empid: employee.empid,
         transactionId: '-',
         did: department.did
-    }
+     }
 
-    issue.data = payslipString;
+     issue.data = payslipString;
 
     var level = 1;
     while(1){
@@ -330,10 +279,22 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
         template: req.query.template
     });
 
-    app.autoID.increment('issue_max_pid');
+    var pid = app.autoID.increment('issue_max_pid');
 
     await blockWait();
-
+    var authDept = await app.model.Authdept.count({ did: department.did, deleted: '0' });
+    var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
+    var mailBody = {
+        mailType: "initialiseCertificate",
+        mailOptions: {
+            userEmail: employee.email,
+            authoriserEmail: authorizer.email,
+            issuerEmail: issuer.email,
+            name: req.query.data.degree,
+            assetId: pid
+        }
+    }
+    mailCall.call("POST", "", mailBody, 0);
     return {
         message: "Asset initiated",
         isSuccess: true
@@ -607,6 +568,18 @@ async function authorizerSign(req){
         atype: 'payslip'
     });
 
+    var employee = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
+    var mailBody = {
+        mailType: "authoriseCertificate",
+        mailOptions: {
+            userEmail: employee.email,
+            authoriserEmail: checkauth.email,
+            issuerEmail: issuer.email,
+            name: issue.data.degree,
+            assetId: pid
+        }
+    }
+    mailCall.call("POST", "", mailBody, 0);
     return {
         isSuccess: true
     };

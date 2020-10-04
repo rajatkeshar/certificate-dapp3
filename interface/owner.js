@@ -78,7 +78,20 @@ app.route.post("/owner/verifyViewRequest", async function(req){
         }
     }
 
-    //await blockWait();
+    var issuer = await app.model.Issuer.findOne({ condition: { iid: issuedCert.iid } });
+    var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: req.query.requesterWalletAddress } });
+    //var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid } });
+    var mailBody = {
+        mailType: "grantCertificate",
+        mailOptions: {
+            requesterEmail: requesterDetails.email,
+            ownerEmail: userDetails.email,
+            issuerEmail: issuer.email,
+            name: issuedCert.data.degree,
+            assetId: req.query.assetId
+        }
+    }
+    mailCall.call("POST", "", mailBody, 0);
 
     return response
 });

@@ -7,6 +7,7 @@ var constants = require("../utils/constants");
 var httpCall = require('../utils/httpCall');
 var address = require('../utils/address');
 var belriumJS = require('belrium-js');
+var mailCall = require("../utils/mailCall");
 var _ = require("lodash");
 
 app.route.post("/requester/viewRequest", async function(req){
@@ -45,18 +46,25 @@ app.route.post("/requester/viewRequest", async function(req){
     let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
     let dappId = util.getDappID();
 
-    let params = {
-        transaction: transaction
-    };
+    let params = { transaction: transaction };
 
     console.log("view request data: ", params);
     var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+    if(!response.success){ return { message: JSON.stringify(response) } }
 
-    if(!response.success){
-        return {
-            message: JSON.stringify(response)
+    var issuer = await app.model.Issuer.findOne({ condition: { iid: issuedCert.iid } });
+    var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid } });
+    var mailBody = {
+        mailType: "requestCertificate",
+        mailOptions: {
+            requesterEmail: employee.email,
+            ownerEmail: owner.email,
+            issuerEmail: issuer.email,
+            name: issuedCert.data.degree,
+            assetId: req.query.assetId
         }
     }
+    mailCall.call("POST", "", mailBody, 0);
     return response
 });
 
@@ -169,7 +177,7 @@ app.route.post("/requester/asset/get", async function(req) {
         message: "You Are Not Authorized To View This Asset, Pending From Owner End"
       }
     }
-    
+
     if(!requester.issuerStatus.bool() && requester.isAuthorizeByIssuer.bool()) {
       return {
         message: "You Are Not Authorized To View This Asset, Pending From Issuer End"
