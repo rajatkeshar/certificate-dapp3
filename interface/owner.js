@@ -6,6 +6,7 @@ var util = require("../utils/util");
 var constants = require("../utils/constants");
 var httpCall = require('../utils/httpCall.js');
 var address = require('../utils/address');
+var mailCall = require("../utils/mailCall");
 var belriumJS = require('belrium-js');
 
 app.route.post("/owner/verifyViewRequest", async function(req){
@@ -133,6 +134,17 @@ app.route.post("/owner/grant/asset", async function(req){
     console.log("@@@@@@@@@@@@@@@@@@@@@@@ response: ", response);
     if(!response.success) { return { message: JSON.stringify(response) } }
 
+    var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: req.query.requesterWalletAddress } });
+    var mailBody = {
+        mailType: "preGrantedCertificate",
+        mailOptions: {
+            grantToEmail: viewerDetails.email,
+            ownerEmail: userDetails.email,
+            name: issuedCert.data.degree,
+            assetId: req.query.assetId
+        }
+    }
+    mailCall.call("POST", "", mailBody, 0);
     return response
 });
 

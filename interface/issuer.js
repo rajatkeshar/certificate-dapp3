@@ -5,6 +5,7 @@ var blockWait = require("../utils/blockwait");
 var util = require("../utils/util");
 var constants = require("../utils/constants");
 var httpCall = require('../utils/httpCall.js');
+var mailCall = require("../utils/mailCall");
 var belriumJS = require('belrium-js');
 
 app.route.post("/issuer/verifyViewRequest", async function(req){

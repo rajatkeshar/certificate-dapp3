@@ -96,6 +96,21 @@ app.route.post("/requester/authorizeby/issuer", async function(req){
     if(!response.success){
         return { message: JSON.stringify(response) }
     }
+
+    var issuer = await app.model.Issuer.findOne({ condition: { iid: issuedCert.iid } });
+    var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode } });
+    var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid } });
+    var mailBody = {
+        mailType: "verifyCertificate",
+        mailOptions: {
+            requesterEmail: requesterDetails.email,
+            ownerEmail: owner.email,
+            issuerEmail: issuer.email,
+            name: issuedCert.data.degree,
+            assetId: req.query.assetId
+        }
+    }
+    mailCall.call("POST", "", mailBody, 0);
     return response
 });
 
