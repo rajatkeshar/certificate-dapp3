@@ -19,6 +19,7 @@ app.route.post("/requester/viewRequest", async function(req){
 
     var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
     if(!issuedCert) return { message: "Asset does not exist" }
+    issuedCert.data = JSON.parse(issuedCert.data);
 
     var employee = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid }});
     if(employee.walletAddress == address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))) return { message: "You can not make view request on own asset"}
@@ -64,6 +65,7 @@ app.route.post("/requester/viewRequest", async function(req){
             assetId: req.query.assetId
         }
     }
+    console.log("mailBody: ", mailBody);
     mailCall.call("POST", "", mailBody, 0);
     return response
 });
@@ -75,6 +77,7 @@ app.route.post("/requester/authorizeby/issuer", async function(req){
 
     var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
     if(!issuedCert) return { message: "Asset does not exist" }
+    issuedCert.data = JSON.parse(issuedCert.data);
 
     var requester = await app.model.Requester.findOne({ condition: { assetId: req.query.assetId, requesterWalletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode } });
     if(requester && requester.ownerStatus.bool() && requester.isAuthorizeByIssuer.bool()) return { message: "Request Already processed" }
@@ -101,7 +104,7 @@ app.route.post("/requester/authorizeby/issuer", async function(req){
     var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode } });
     var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid } });
     var mailBody = {
-        mailType: "verifyCertificate",
+        mailType: "sendCertificateVerification",
         mailOptions: {
             requesterEmail: requesterDetails.email,
             ownerEmail: owner.email,

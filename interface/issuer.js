@@ -35,7 +35,7 @@ app.route.post("/issuer/verifyViewRequest", async function(req){
           message: "Asset does not exist"
       }
     }
-
+    issuedCert.data = JSON.parse(issuedCert.data);
     var requester = await app.model.Requester.findOne({
         condition: {
             assetId: req.query.assetId,

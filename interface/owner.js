@@ -27,9 +27,7 @@ app.route.post("/owner/verifyViewRequest", async function(req){
     }
 
     var issuedCert = await app.model.Issue.findOne({
-      condition: {
-          transactionId: req.query.assetId  // transaction id in issue table is assetId
-      }
+      condition: { transactionId: req.query.assetId}  // transaction id in issue table is assetId
     });
 
     if(!issuedCert) {
@@ -37,7 +35,7 @@ app.route.post("/owner/verifyViewRequest", async function(req){
           message: "Asset does not exist"
       }
     }
-
+    issuedCert.data = JSON.parse(issuedCert.data);
     var requester = await app.model.Requester.findOne({
         condition: {
             assetId: req.query.assetId,
@@ -107,7 +105,8 @@ app.route.post("/owner/grant/asset", async function(req){
 
     var issuedCert = await app.model.Issue.findOne({ condition: { empid: userDetails.empid, transactionId: req.query.assetId} }); // transaction id in issue table is assetId
     if(!issuedCert) { return { message: "Asset does not exist" } }
-
+    issuedCert.data = JSON.parse(issuedCert.data);
+    
     var viewerDetails = await app.model.Employee.findOne({ condition: { email: req.query.viewerEmail }});
     var requesterWalletAddress = viewerDetails.walletAddress;
 

@@ -62,7 +62,7 @@ async function issueAsset(req){
     });
 
     if(!issue) return { message: "Invalid Asset", isSuccess: false }
-
+    issue.data = JSON.parse(issue.data);
     if(issue.status === 'issued') return { message: "Asset already issued", isSuccess: false }
 
     if(issue.status === 'pending') return { message: "Asset not Authorized", isSuccess: false }
