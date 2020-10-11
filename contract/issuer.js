@@ -9,5 +9,6 @@ module.exports = {
     });
     app.sdb.update('Requester', { issuerWalletAddress: this.trs.senderId + countryCode }, {trsId: req.trsId});
     app.sdb.update('Requester', { issuerStatus: "true" }, {trsId: req.trsId});
+    app.sdb.update('Requester', { issuerTrsId: this.trs.id }, {trsId: req.trsId});
   }
 }

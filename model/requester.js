@@ -46,7 +46,7 @@ module.exports = {
             type: 'String',
             length: 255,
         },
-        /*{
+        {
             name: 'ownerTrsId',
             type: 'String',
             length: 255,
@@ -55,6 +55,6 @@ module.exports = {
             name: 'issuerTrsId',
             type: 'String',
             length: 255,
-        }*/
+        }
     ]
 }

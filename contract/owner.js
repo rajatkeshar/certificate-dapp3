@@ -9,6 +9,7 @@ module.exports = {
     });
     app.sdb.update('Requester', { ownerWalletAddress: this.trs.senderId + countryCode }, {trsId: req.trsId});
     app.sdb.update('Requester', { ownerStatus: "true" }, {trsId: req.trsId});
+    app.sdb.update('Requester', { ownerTrsId: this.trs.id }, {trsId: req.trsId});
   },
   ownerGrantAsset: async function(requesterWalletAddress, assetId, countryCode) {
     app.sdb.lock('requester.ownerGrantViewers' + assetId)
@@ -17,6 +18,7 @@ module.exports = {
       requesterWalletAddress: requesterWalletAddress,
       ownerStatus: "true",
       assetId: assetId,
+      ownerTrsId: this.trs.id, 
       trsId: this.trs.id,
       initBy: "owner"
     })
