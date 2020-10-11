@@ -471,7 +471,7 @@ async function authorizerSign(req){
         message: "Invalid issue",
         isSuccess: false
     }
-    issue.data = JSON.parse(issue.data);
+
     if(issue.status !== "pending") return {
         message: "Issue is not pending",
         isSuccess: false
@@ -567,7 +567,7 @@ async function authorizerSign(req){
         timestampp: new Date().getTime(),
         atype: 'payslip'
     });
-
+    issue.data = JSON.parse(issue.data);
     var employee = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
     var mailBody = {
         mailType: "authoriseCertificate",
