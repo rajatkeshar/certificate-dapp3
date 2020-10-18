@@ -10,6 +10,16 @@ var centralServerCall = require("./utils/centralServerCall.js");
 module.exports = async function () {
     console.log('enter dapp init');
     var contractObjects = {
+        initPaySlip: {
+            type: 1001,
+            name: "Init PaySlip",
+            location: 'payroll.initPaySlip'
+        },
+        authorizePaySlip: {
+            type: 1002,
+            name: "Authorize PaySlip",
+            location: 'payroll.authorizePaySlip'
+        },
         finalIssue: {
             type: 1003,
             name: "Final issue",

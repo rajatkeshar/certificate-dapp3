@@ -194,12 +194,9 @@ app.route.post('/payslip/confirmedIssues',async function(req,cb){
 })
 
 app.route.post('/payslip/initialIssue',async function(req,cb){
-    await locker("/payslip/initialIssue");
-    logger.info("Entered /payslip/initialIssue API");
     // Check Employee
     var employee = await app.model.Employee.findOne({ condition: { empid: req.query.empid, deleted: "0" } });
     if(!employee) return { message: "Invalid Recipient", isSuccess: false }
-    var timestamp = new Date().getTime();
 
      issuerid=req.query.issuerid;
      secret=req.query.secret;
@@ -233,72 +230,26 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
      var base64hash = hash.toString('base64');
      var base64sign = sign.toString('base64');
 
-     var issue = {
-        pid:String(Number(app.autoID.get('issue_max_pid')) + 1),
-        iid:issuerid,
-        hash: base64hash,
-        sign: base64sign,
-        publickey:publickey,
-        timestampp:timestamp,
-        status:"pending",
-        empid: employee.empid,
-        transactionId: '-',
-        did: department.did
-     }
+     let options = {
+         fee: String(constants.fees.defaultFee),
+         type: 1001,
+         args: JSON.stringify([issuer.iid, base64hash, base64sign, publickey, req.query.empid, department.did, department.levels, req.query.data.degree, payslipString, req.query.template])
+     };
+     let secret = req.query.secret;
 
-     issue.data = payslipString;
+     let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
 
-    var level = 1;
-    while(1){
-        if(level > department.levels){
-            issue.status = 'authorized',
-            level--;
-            break;
-        }
-        var authLevelCount = await app.model.Authdept.count({
-            did: department.did,
-            level: level,
-            deleted: '0'
-        });
+     console.log("############ transaction: ", transaction);
+     let dappId = util.getDappID();
 
-        if(authLevelCount) {
-            break;
-        }
+     let params = {
+         transaction: transaction
+     };
 
-        level++;
-    }
-    issue.authLevel = level;
+     console.log("init certificate data: ", params);
+     var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
 
-    app.sdb.create("issue", issue);
-    if(issuer.publickey === '-'){
-        app.sdb.update('issuer', {publickey: publickey}, {iid:issuerid});
-    }
-
-    app.sdb.create('template', {
-        pid: issue.pid,
-        template: req.query.template
-    });
-
-    var pid = app.autoID.increment('issue_max_pid');
-
-    await blockWait();
-    var authDept = await app.model.Authdept.count({ did: department.did, deleted: '0' });
-    var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
-    var mailBody = {
-        mailType: "initialiseCertificate",
-        mailOptions: {
-            userEmail: employee.email,
-            authoriserEmail: authorizer.email,
-            issuerEmail: issuer.email,
-            name: req.query.data.degree,
-            assetId: pid
-        }
-    }
-    mailCall.call("POST", "", mailBody, 0);
-    return {
-        message: "Asset initiated",
-        isSuccess: true
-    }
+     return response;
 });
 
 app.route.post('/authorizers/pendingSigns',async function(req,cb){
@@ -409,8 +360,8 @@ app.route.post('/authorizer/authorize',async function(req,cb){
     logger.info("Entered /authorizer/authorize API");
     await locker("Authorization@"+req.query.pid);
     var result = await authorizerSign(req);
-    if(!result.isSuccess) return result;
-    await blockWait();
+    // if(!result.isSuccess) return result;
+    // await blockWait();
     return result;
 })
 
@@ -442,147 +393,53 @@ async function authorizerSign(req){
     var authid = req.query.aid;
     var pid=req.query.pid;
     try{
-    app.sdb.lock("authorizerSign@"+req.query.pid);
-    }catch(err){
-        return {
-            isSuccess: false,
-            message: "Same pid in a block"
-        }
-    }
-        // Check Authorizer
+      app.sdb.lock("authorizerSign@"+req.query.pid);
+    } catch(err) { return { isSuccess: false, message: "Same pid in a block" } }
     var publickey = util.getPublicKey(secret);
-    var checkauth = await app.model.Authorizer.findOne({
-        condition:{
-            aid: authid,
-            deleted: '0'
-        }
-    });
-    if(!checkauth) return {
-        message: "Invalid Authorizer",
-        isSuccess: false
-    }
+    var checkauth = await app.model.Authorizer.findOne({ condition:{ aid: authid, deleted: '0' } });
+    if(!checkauth) return { message: "Invalid Authorizer", isSuccess: false }
 
-    var issue = await app.model.Issue.findOne({
-        condition: {
-            pid: pid
-        }
-    });
-    if(!issue) return {
-        message: "Invalid issue",
-        isSuccess: false
-    }
+    var issue = await app.model.Issue.findOne({ condition: { pid: pid } });
+    if(!issue) return { message: "Invalid issue", isSuccess: false }
 
-    if(issue.status !== "pending") return {
-        message: "Issue is not pending",
-        isSuccess: false
-    }
+    if(issue.status !== "pending") return { message: "Issue is not pending", isSuccess: false }
 
     var authdept = await app.model.Authdept.findOne({
-        condition: {
-            aid: authid,
-            did: issue.did,
-            level: issue.authLevel
-        }
+        condition: { aid: authid, did: issue.did, level: issue.authLevel }
     });
-    if(!authdept) return {
-        isSuccess: false,
-        message: "Authorizer is not supposed to sign this payslip"
-    }
+    if(!authdept) return { isSuccess: false, message: "Authorizer is not supposed to sign this payslip" }
 
-    var check = await app.model.Cs.findOne({
-        condition: {
-            pid: pid,
-            aid: authid
-        }
-    });
-    if(check) return {
-        message: "Already authorized",
-        isSuccess: false
-    }
+    var check = await app.model.Cs.findOne({ condition: { pid: pid, aid: authid } });
+    if(check) return { message: "Already authorized", isSuccess: false }
 
-    var issuer = await app.model.Issuer.findOne({
-        condition: {
-            iid: issue.iid
-        }
-    });
-    if(!issuer) return {
-        message: "Invalid issuer",
-        isSuccess: false
-    }
+    var issuer = await app.model.Issuer.findOne({ condition: { iid: issue.iid } });
+    if(!issuer) return { message: "Invalid issuer", isSuccess: false }
 
     var hash = util.getHash(issue.data);
     var base64hash = hash.toString('base64');
-    console.log("issue.hash: " + issue.hash);
-    console.log("base64hash: " + base64hash);
-    if(issue.hash !== base64hash) return {
-        message: "Hash doesn't match",
-        isSuccess: false
-    }
+    if(issue.hash !== base64hash) return { message: "Hash doesn't match", isSuccess: false }
     var base64sign = (util.getSignatureByHash(hash, secret)).toString('base64');
 
-    if(checkauth.publickey === '-'){
-        app.sdb.update('authorizer', {publickey: publickey}, {aid: authid});
-    }
-
-    app.sdb.create('cs', {
-        pid:pid,
-        aid:authid,
-        sign: base64sign,
-        publickey: publickey,
-        timestampp: new Date().getTime(),
-        deleted: '0'
-    });
-
-    var department = await app.model.Department.findOne({
-        condition: {
-            did: issue.did
-        }
-    });
-
-    let level = issue.authLevel + 1;
-    while(1){
-        if(level > department.levels){
-            app.sdb.update('issue', {status: 'authorized'}, {pid: issue.pid});
-            level--;
-            break;
-        }
-        var authLevelCount = await app.model.Authdept.count({
-            did: issue.did,
-            level: level,
-            deleted: '0'
-        });
-
-        if(authLevelCount) {
-            break;
-        }
-
-        level++;
-    }
-    app.sdb.update('issue', {authLevel: level}, {pid: issue.pid});
-
-    var activityMessage = checkauth.email + " has authorized payslip " + pid + " which was issued by " + issuer.email;
-    app.sdb.create('activity', {
-        activityMessage: activityMessage,
-        pid: pid,
-        timestampp: new Date().getTime(),
-        atype: 'payslip'
-    });
-    issue.data = JSON.parse(issue.data);
-    var employee = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
-    var mailBody = {
-        mailType: "authoriseCertificate",
-        mailOptions: {
-            userEmail: employee.email,
-            authoriserEmail: checkauth.email,
-            issuerEmail: issuer.email,
-            name: issue.data.degree,
-            assetId: pid
-        }
-    }
-    mailCall.call("POST", "", mailBody, 0);
-    return {
-        isSuccess: true
+    let options = {
+        fee: String(constants.fees.defaultFee),
+        type: 1001,
+        args: JSON.stringify([issuer.iid, pid, base64sign, publickey, authid, issue.empid, issue.did, issue.authLevel, issue.data])
     };
+    let secret = req.query.secret;
+
+    let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
+
+    console.log("############ transaction: ", transaction);
+    let dappId = util.getDappID();
+
+    let params = {
+        transaction: transaction
+    };
+
+    console.log("init certificate data: ", params);
+    var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
+
+    return response;
 }
 
 app.route.post('/authorizer/reject',async function(req,cb){

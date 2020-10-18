@@ -13,30 +13,108 @@ var locker = require("../utils/locker");
 
 
 module.exports = {
+    initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, name, payslipString, template) {
+      app.sdb.lock('payroll.initPaySlip' + empid);
+      var issue = {
+         pid:String(Number(app.autoID.get('issue_max_pid')) + 1),
+         iid:issuerid,
+         hash: base64hash,
+         sign: base64sign,
+         publickey:publickey,
+         timestampp:new Date().getTime(),
+         status:"pending",
+         empid: empid,
+         transactionId: '-',
+         did: did,
+         data: payslipString
+      }
+     var level = 1;
+     while(1){
+         if(level > levels){
+             issue.status = 'authorized',
+             level--;
+             break;
+         }
+         var authLevelCount = await app.model.Authdept.count({ did: did, level: level, deleted: '0' });
+         if(authLevelCount) { break; }
+         level++;
+     }
+     issue.authLevel = level;
+     app.sdb.create("issue", issue);
+     if(issuer.publickey === '-'){
+         app.sdb.update('issuer', {publickey: publickey}, {iid:issuerid});
+     }
+     app.sdb.create('template', { pid: issue.pid, template: template });
 
+     var pid = app.autoID.increment('issue_max_pid');
+     var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
+     var authDept = await app.model.Authdept.findOne({ did: did, deleted: '0' });
+     var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
+     var issuer = await app.model.Issuer.findOne({ condition:{ iid: issuerid, deleted: "0" } });
+     console.log("authDept: ", authDept);
+     console.log("authorizer: ", authorizer);
+     console.log("employee: ", employee);
+     console.log("issuer: ", issuer);
+     var mailBody = {
+         mailType: "initialiseCertificate",
+         mailOptions: {
+             userEmail: employee.email,
+             authoriserEmail: authorizer.email,
+             issuerEmail: issuer.email,
+             name: name,
+             assetId: pid
+         }
+     }
+     mailCall.call("POST", "", mailBody, 0);
+    },
+    authorizePaySlip: async function(issuerid, pid, base64sign, publickey, authid, empid, did, authLevel, payslipString) {
+      app.sdb.update('authorizer', {publickey: publickey}, {aid: authid});
+      app.sdb.create('cs', {
+          pid:pid, aid:authid, sign: base64sign, publickey: publickey, timestampp: new Date().getTime(), deleted: '0'
+      });
+      var department = await app.model.Department.findOne({ condition: { did: did } });
+
+      let level = authLevel + 1;
+      while(1){
+          if(level > department.levels){
+              app.sdb.update('issue', {status: 'authorized'}, {pid: pid});
+              level--;
+              break;
+          }
+          var authLevelCount = await app.model.Authdept.count({ did: did, level: level, deleted: '0' });
+
+          if(authLevelCount) { break; }
+          level++;
+      }
+      app.sdb.update('issue', {authLevel: level}, {pid: pid});
+      data = JSON.parse(payslipString);
+      var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
+      var authDept = await app.model.Authdept.findOne({ did: did, deleted: '0' });
+      var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
+      var issuer = await app.model.Issuer.findOne({ condition:{ iid: issuerid, deleted: "0" } });
+      var mailBody = {
+          mailType: "authoriseCertificate",
+          mailOptions: {
+              userEmail: employee.email,
+              authoriserEmail: checkauth.email,
+              issuerEmail: issuer.email,
+              name: data.degree,
+              assetId: pid
+          }
+      }
+      mailCall.call("POST", "", mailBody, 0);
+    },
     issuePaySlip: async function(toaddr, type, payslip, pid, balance){
         //Check the package
-        var limit = await app.model.Issuelimit.findOne({
-            condition: {
-                name: "issuelimit"
-            }
-        });
-        // if(!limit || limit.value <= 0 || limit.expirydate < new Date().getTime()) return {
-        //     isSuccess: false,
-        //     message: "No active package"
-        // }
+        var limit = await app.model.Issuelimit.findOne({ condition: { name: "issuelimit" } });
+        if(!limit || limit.value <= 0 || limit.expirydate < new Date().getTime()) return {
+            isSuccess: false, message: "No active package"
+        }
         app.sdb.update('issue', {transactionId: this.trs.id}, {pid: pid});
         app.sdb.update('issue', {status: "issued"}, {pid: pid});
         app.sdb.update('issue', {timestampp: new Date().getTime()}, {pid: pid});
-        app.sdb.create('transactiondetail', {
-            transactionId: this.trs.id,
-            balance: balance
-        });
-        app.sdb.update("issuelimit", {
-            value: limit.value - 1
-        }, {
-            name: "issuelimit"
-        });
+        app.sdb.create('transactiondetail', { transactionId: this.trs.id, balance: balance });
+        app.sdb.update("issuelimit", { value: limit.value - 1 }, { name: "issuelimit" });
     },
 
     authorize: async function(iid, secret, authid, dappid){
@@ -54,15 +132,6 @@ module.exports = {
         if(checkauth.publickey === '-'){
             app.sdb.update('authorizer', {publickey: publickey}, {id: authid});
         }
-
-        // // Check Authorization table
-        // var check = await app.model.Ps.exists({
-        //     iid: iid,
-        //     aid: checkauth.id
-        // });
-        // if(!check) return "Signature not pending";
-
-        // Fetch the Unconfirmed issue
 
         var check = await app.model.Cs.findOne({
             condition: {

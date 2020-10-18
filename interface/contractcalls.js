@@ -109,13 +109,6 @@ async function issueAsset(req){
         }
     }
     mailCall.call("POST", "", mailBody, 0);
-    var activityMessage = issuer.email + " has issued payslip " + pid;
-    app.sdb.create('activity', {
-        activityMessage: activityMessage,
-        pid: pid,
-        timestampp: new Date().getTime(),
-        atype: 'payslip'
-    });
 
     return {
         isSuccess: true,
