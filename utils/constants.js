@@ -20,6 +20,7 @@ module.exports = {
     inTransfer: 0.001,
     outTransfer: 0.001,
     viewRequest: 0,
+    defaultFee: 0,
     verifyViewRequest: 0,
     updateIssueLimit: 0,
     registerEmployee: 0,
