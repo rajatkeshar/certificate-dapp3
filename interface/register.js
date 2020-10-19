@@ -233,7 +233,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
      let options = {
          fee: String(constants.fees.defaultFee),
          type: 1001,
-         args: JSON.stringify([issuer.iid, base64hash, base64sign, publickey, req.query.empid, department.did, department.levels, req.query.data.degree, payslipString, req.query.template])
+         args: JSON.stringify([issuer.iid, base64hash, base64sign, publickey, req.query.empid, department.did, department.levels, payslipString, req.query.template])
      };
 
      let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
@@ -937,7 +937,7 @@ app.route.post('/registerUser/', async function(req, cb){
           var options = {
               fee: String(constants.fees.registerUser),
               type: 1011,
-              args: JSON.stringify([email, genId, departments, timestampp])
+              args: JSON.stringify([name, email, genId, departments, timestampp])
           };
           var transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
           console.log("############ transaction: ", transaction);
@@ -955,7 +955,7 @@ app.route.post('/registerUser/', async function(req, cb){
           var options = {
               fee: String(constants.fees.registerUser),
               type: 1012,
-              args: JSON.stringify([email, genId, timestampp])
+              args: JSON.stringify([name, email, genId, timestampp])
           };
           var transaction = belriumJS.dapp.createInnerTransaction(options, constants.admin.secret);
           console.log("############ transaction: ", transaction);

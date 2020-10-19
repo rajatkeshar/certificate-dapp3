@@ -13,9 +13,10 @@ var locker = require("../utils/locker");
 
 
 module.exports = {
-    initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, name, payslipString, template) {
+    initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, payslipString, template) {
       app.sdb.lock('payroll.initPaySlip' + empid);
       var issuer = await app.model.Issuer.findOne({ condition:{ iid: issuerid, deleted: "0" } });
+      var data = JSON.parse(payslipString);
       var issue = {
          pid:String(Number(app.autoID.get('issue_max_pid')) + 1),
          iid:issuerid,
@@ -51,17 +52,17 @@ module.exports = {
      var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
      var authDept = await app.model.Authdept.findOne({ did: did, deleted: '0' });
      var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
-     console.log("authDept: ", authDept);
-     console.log("authorizer: ", authorizer);
-     console.log("employee: ", employee);
-     console.log("issuer: ", issuer);
+     // console.log("authDept: ", authDept);
+     // console.log("authorizer: ", authorizer);
+     // console.log("employee: ", employee);
+     // console.log("issuer: ", issuer);
      var mailBody = {
          mailType: "initialiseCertificate",
          mailOptions: {
              userEmail: employee.email,
              authoriserEmail: authorizer.email,
              issuerEmail: issuer.email,
-             name: name,
+             name: data.degree,
              assetId: pid
          }
      }

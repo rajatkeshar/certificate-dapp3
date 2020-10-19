@@ -1,9 +1,14 @@
 module.exports = {
     name: "issuers",
     fields: [
-        {  
+        {
+            name: 'name',
+            type: 'String',
+            length: 255,
+        },
+        {
             name: 'iid',
-            type: 'String', 
+            type: 'String',
             length: 255,
             primary_key: true
         },

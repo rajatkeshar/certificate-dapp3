@@ -1,9 +1,14 @@
 module.exports = {
     name: "authorizers",
     fields: [
-        {  
+        {
+            name: 'name',
+            type: 'String',
+            length: 255,
+        },
+        {
             name: 'aid',
-            type: 'String', 
+            type: 'String',
             length: 255,
             primary_key: true
         },
