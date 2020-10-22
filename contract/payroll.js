@@ -60,8 +60,11 @@ module.exports = {
          mailType: "initialiseCertificate",
          mailOptions: {
              userEmail: employee.email,
+             userName: employee.name,
              authoriserEmail: authorizer.email,
+             authoriserName: authorizer.name,
              issuerEmail: issuer.email,
+             issuerName: issuer.name,
              name: data.degree,
              assetId: pid
          }
@@ -97,8 +100,11 @@ module.exports = {
           mailType: "authoriseCertificate",
           mailOptions: {
               userEmail: employee.email,
+              userName: employee.name,
               authoriserEmail: authorizer.email,
+              authoriserName: authorizer.name,
               issuerEmail: issuer.email,
+              issuerName: issuer.name,
               name: data.degree,
               assetId: pid
           }

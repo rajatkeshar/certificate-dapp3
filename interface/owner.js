@@ -20,36 +20,16 @@ app.route.post("/owner/verifyViewRequest", async function(req){
       }
     });
 
-    if(!userDetails) {
-      return {
-          message: "User must be member on dapps"
-      }
-    }
+    if(!userDetails) { return { message: "User must be member on dapps" } }
+    var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId} }); // transaction id in issue table is assetId
+    if(!issuedCert) { return { message: "Asset does not exist" } }
 
-    var issuedCert = await app.model.Issue.findOne({
-      condition: { transactionId: req.query.assetId}  // transaction id in issue table is assetId
-    });
-
-    if(!issuedCert) {
-      return {
-          message: "Asset does not exist"
-      }
-    }
     issuedCert.data = JSON.parse(issuedCert.data);
     var requester = await app.model.Requester.findOne({
-        condition: {
-            assetId: req.query.assetId,
-            requesterWalletAddress: req.query.requesterWalletAddress
-        }
+        condition: { assetId: req.query.assetId, requesterWalletAddress: req.query.requesterWalletAddress }
     });
-    console.log("################### requester: ", requester)
-    if(requester && requester.ownerStatus.bool()) {
-        return {
-          message: "Request Already verified"
-        }
-    }
 
-    console.log("constants.fees.viewRequest: ", constants.fees.verifyViewRequest);
+    if(requester && requester.ownerStatus.bool()) { return { message: "Request Already verified" } }
 
     let options = {
         fee: String(constants.fees.verifyViewRequest),
@@ -57,20 +37,13 @@ app.route.post("/owner/verifyViewRequest", async function(req){
         args: JSON.stringify([req.query.requesterWalletAddress, req.query.assetId, req.query.countryCode])
     };
     let secret = req.query.secret;
-
     let transaction = belriumJS.dapp.createInnerTransaction(options, secret);
-
-    console.log("############ transaction: ", transaction);
     let dappId = util.getDappID();
-
-    let params = {
-        transaction: transaction
-    };
+    let params = { transaction: transaction };
 
     console.log("registerResult data: ", params);
     var response = await httpCall.call('PUT', `/api/dapps/${dappId}/transactions/signed`, params);
 
-    console.log("@@@@@@@@@@@@@@@@@@@@@@@ response: ", response);
     if(!response.success){
         return {
             message: JSON.stringify(response)
@@ -84,8 +57,11 @@ app.route.post("/owner/verifyViewRequest", async function(req){
         mailType: "grantCertificate",
         mailOptions: {
             requesterEmail: requesterDetails.email,
+            requesterName: requesterDetails.name,
             ownerEmail: userDetails.email,
+            ownerName: userDetails.name,
             issuerEmail: issuer.email,
+            issuerName: issuer.name,
             name: issuedCert.data.degree,
             assetId: req.query.assetId
         }
@@ -139,6 +115,7 @@ app.route.post("/owner/grant/asset", async function(req){
         mailOptions: {
             grantToEmail: viewerDetails.email,
             ownerEmail: userDetails.email,
+            ownerName: userDetails.name,
             name: issuedCert.data.degree,
             assetId: req.query.assetId
         }

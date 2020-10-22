@@ -14,21 +14,20 @@ app.route.post("/requester/viewRequest", async function(req){
     console.log("############### calling view request: ", req.query)
 
     if(!req.query.countryCode) return { message: "missing params countryCode" };
-
+    var requesterWalletAddress = address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode;
     //try { app.sdb.lock("viewRequest@"+req.query.assetId);} catch(err){ return { message: "Same process in a block" } }
 
     var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
     if(!issuedCert) return { message: "Asset does not exist" }
     issuedCert.data = JSON.parse(issuedCert.data);
 
-    var employee = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid }});
-    if(employee.walletAddress == address.generateBase58CheckAddress(util.getPublicKey(req.query.secret))) return { message: "You can not make view request on own asset"}
-    console.log("address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)): ", address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)));
+    var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid }});
+    if(owner.walletAddress == requesterWalletAddress) return { message: "You can not make view request on own asset"}
 
     var requester = await app.model.Requester.findOne({
         condition: {
             assetId: req.query.assetId,
-            requesterWalletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode
+            requesterWalletAddress: requesterWalletAddress
         }
     });
     console.log("################### requester: ", requester)
@@ -54,13 +53,16 @@ app.route.post("/requester/viewRequest", async function(req){
     if(!response.success){ return { message: JSON.stringify(response) } }
 
     var issuer = await app.model.Issuer.findOne({ condition: { iid: issuedCert.iid } });
-    var owner = await app.model.Employee.findOne({ condition: { empid: issuedCert.empid } });
+    var requester = await app.model.Employee.findOne({ condition: { walletAddress: requesterWalletAddress } });
     var mailBody = {
         mailType: "requestCertificate",
         mailOptions: {
-            requesterEmail: employee.email,
+            requesterEmail: requester.email,
+            requesterName: requester.name,
             ownerEmail: owner.email,
+            ownerName: owner.name,
             issuerEmail: issuer.email,
+            issuerName: issuer.name,
             name: issuedCert.data.degree,
             assetId: req.query.assetId
         }
@@ -107,8 +109,11 @@ app.route.post("/requester/authorizeby/issuer", async function(req){
         mailType: "sendCertificateVerification",
         mailOptions: {
             requesterEmail: requesterDetails.email,
+            requesterName: requesterDetails.name,
             ownerEmail: owner.email,
+            ownerName: owner.name,
             issuerEmail: issuer.email,
+            issuerName: issuer.name,
             name: issuedCert.data.degree,
             assetId: req.query.assetId
         }

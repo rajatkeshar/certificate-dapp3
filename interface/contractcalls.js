@@ -102,8 +102,9 @@ async function issueAsset(req){
         mailType: "issueCertificate",
         mailOptions: {
             userEmail: employee.email,
-            //authoriserEmail: checkauth.email,
+            userName: employee.name,
             issuerEmail: issuer.email,
+            issuerName: issuer.name,
             name: issue.data.degree,
             assetId: pid
         }
