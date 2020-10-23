@@ -65,7 +65,7 @@ module.exports = {
              authoriserName: authorizer.name,
              issuerEmail: issuer.email,
              issuerName: issuer.name,
-             name: data.degree,
+             certificateName: data.degree,
              assetId: pid
          }
      }
@@ -105,7 +105,7 @@ module.exports = {
               authoriserName: authorizer.name,
               issuerEmail: issuer.email,
               issuerName: issuer.name,
-              name: data.degree,
+              certificateName: data.degree,
               assetId: pid
           }
       }

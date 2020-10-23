@@ -50,7 +50,7 @@ app.route.post("/issuer/verifyViewRequest", async function(req){
             ownerName: owner.name,
             issuerEmail: issuer.email,
             issuerName: issuer.name,
-            name: issuedCert.data.degree,
+            certificateName: issuedCert.data.degree,
             assetId: req.query.assetId
         }
     }

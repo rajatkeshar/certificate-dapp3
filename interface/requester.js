@@ -63,7 +63,7 @@ app.route.post("/requester/viewRequest", async function(req){
             ownerName: owner.name,
             issuerEmail: issuer.email,
             issuerName: issuer.name,
-            name: issuedCert.data.degree,
+            certificateName: issuedCert.data.degree,
             assetId: req.query.assetId
         }
     }
@@ -114,7 +114,7 @@ app.route.post("/requester/authorizeby/issuer", async function(req){
             ownerName: owner.name,
             issuerEmail: issuer.email,
             issuerName: issuer.name,
-            name: issuedCert.data.degree,
+            certificateName: issuedCert.data.degree,
             assetId: req.query.assetId
         }
     }

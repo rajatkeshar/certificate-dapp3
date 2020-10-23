@@ -105,8 +105,8 @@ async function issueAsset(req){
             userName: employee.name,
             issuerEmail: issuer.email,
             issuerName: issuer.name,
-            name: issue.data.degree,
-            assetId: pid
+            certificateName: issue.data.degree,
+            assetId: response.transactionId
         }
     }
     mailCall.call("POST", "", mailBody, 0);

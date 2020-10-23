@@ -62,7 +62,7 @@ app.route.post("/owner/verifyViewRequest", async function(req){
             ownerName: userDetails.name,
             issuerEmail: issuer.email,
             issuerName: issuer.name,
-            name: issuedCert.data.degree,
+            certificateName: issuedCert.data.degree,
             assetId: req.query.assetId
         }
     }
@@ -116,7 +116,7 @@ app.route.post("/owner/grant/asset", async function(req){
             grantToEmail: viewerDetails.email,
             ownerEmail: userDetails.email,
             ownerName: userDetails.name,
-            name: issuedCert.data.degree,
+            certificateName: issuedCert.data.degree,
             assetId: req.query.assetId
         }
     }
