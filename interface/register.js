@@ -233,7 +233,7 @@ app.route.post('/payslip/initialIssue',async function(req,cb){
      let options = {
          fee: String(constants.fees.defaultFee),
          type: 1001,
-         args: JSON.stringify([issuer.iid, base64hash, base64sign, publickey, req.query.empid, department.did, department.levels, payslipString, req.query.template])
+         args: JSON.stringify([issuer.iid, base64hash, base64sign, publickey, req.query.empid, department.did, department.levels, payslipString])
      };
 
      let transaction = belriumJS.dapp.createInnerTransaction(options, secret);

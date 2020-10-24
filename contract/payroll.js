@@ -13,7 +13,8 @@ var locker = require("../utils/locker");
 
 
 module.exports = {
-    initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, payslipString, template) {
+    //initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, payslipString, template) {
+    initPaySlip: async function(issuerid, base64hash, base64sign, publickey, empid, did, levels, payslipString) {
       app.sdb.lock('payroll.initPaySlip' + empid);
       var issuer = await app.model.Issuer.findOne({ condition:{ iid: issuerid, deleted: "0" } });
       var data = JSON.parse(payslipString);
@@ -46,7 +47,7 @@ module.exports = {
      if(issuer.publickey === '-'){
          app.sdb.update('issuer', {publickey: publickey}, {iid:issuerid});
      }
-     app.sdb.create('template', { pid: issue.pid, template: template });
+     //app.sdb.create('template', { pid: issue.pid, template: template });
 
      var pid = app.autoID.increment('issue_max_pid');
      var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
