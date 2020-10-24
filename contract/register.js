@@ -29,9 +29,10 @@ module.exports = {
       extra: extra
     })
   },
-  registerIssuer: async function(email, issuerId, departments, timestampp) {
+  registerIssuer: async function(name, email, issuerId, departments, timestampp) {
     app.sdb.lock('register.registerIssuer' + email);
     await app.sdb.create('issuer', {
+      name: name,
       email: email,
       publickey: "-",
       iid: issuerId,
@@ -47,9 +48,10 @@ module.exports = {
       });
     }
   },
-  registerAuthorizer: async function(email, authorizerId, timestampp) {
+  registerAuthorizer: async function(name, email, authorizerId, timestampp) {
     app.sdb.lock('register.registerAuthorizer' + email);
     app.sdb.create('authorizer', {
+      name: name,
       email: email,
       aid: authorizerId,
       publickey: "-",
