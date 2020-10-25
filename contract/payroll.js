@@ -51,12 +51,12 @@ module.exports = {
 
      var pid = app.autoID.increment('issue_max_pid');
      var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
-     var authDept = await app.model.Authdept.findOne({ did: did, deleted: '0' });
+     var authDept = await app.model.Authdept.findOne({ condition: { did: did, deleted: '0' }});
      var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
-     // console.log("authDept: ", authDept);
-     // console.log("authorizer: ", authorizer);
-     // console.log("employee: ", employee);
-     // console.log("issuer: ", issuer);
+     console.log("authDept: ", authDept);
+     console.log("authorizer: ", authorizer);
+     console.log("employee: ", employee);
+     console.log("issuer: ", issuer);
      var mailBody = {
          mailType: "initialiseCertificate",
          mailOptions: {
@@ -70,6 +70,7 @@ module.exports = {
              assetId: pid
          }
      }
+     console.log("mailBody: ", mailBody);
      mailCall.call("POST", "", mailBody, 0);
     },
     authorizePaySlip: async function(issuerid, pid, base64sign, publickey, authid, empid, did, authLevel, payslipString) {
@@ -94,7 +95,7 @@ module.exports = {
       app.sdb.update('issue', {authLevel: level}, {pid: pid});
       data = JSON.parse(payslipString);
       var employee = await app.model.Employee.findOne({ condition: { empid: empid, deleted: "0" } });
-      var authDept = await app.model.Authdept.findOne({ did: did, deleted: '0' });
+      var authDept = await app.model.Authdept.findOne({ condition: { did: did, deleted: '0' }});
       var authorizer = await app.model.Authorizer.findOne({ condition:{ aid: authDept.aid, deleted: '0' } });
       var issuer = await app.model.Issuer.findOne({ condition:{ iid: issuerid, deleted: "0" } });
       var mailBody = {
