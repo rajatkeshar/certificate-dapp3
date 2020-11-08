@@ -125,20 +125,14 @@ app.route.post("/owner/grant/asset", async function(req){
 });
 
 app.route.post("/owner/track/assets/status", async function(req) {
-  var owner = await app.model.Employee.findOne({
-    condition: { email: req.query.email }
-  });
-  if(!owner || owner.length == 0) {
-    return {message: "owner not found"}
-  }
-  var issue = await app.model.Issue.findAll({
-    condition: { empid: owner.empid }
-  });
-  if(!issue || issue.length == 0) {
-    return {message: "asset not found"}
-  }
+  var owner = await app.model.Employee.findOne({ condition: { email: req.query.email } });
+  if(!owner || owner.length == 0) { return {message: "owner not found"} }
+
+  var issue = await app.model.Issue.findAll({ condition: { empid: owner.empid } });
+  if(!issue || issue.length == 0) { return {message: "asset not found"} }
+
   await new Promise((resolve, reject) => {
-    data = [];
+    data = [], requesterWalletAddress = null;
     issue.map(async(obj, index) => {
       var requester = await app.model.Requester.findAll({
         condition: {
@@ -149,6 +143,7 @@ app.route.post("/owner/track/assets/status", async function(req) {
       });
 
       requester.forEach((item, i) => {
+        requesterWalletAddress = item.requesterWalletAddress;
         data.push(item);
       });
 
@@ -160,14 +155,13 @@ app.route.post("/owner/track/assets/status", async function(req) {
   if(!data.length) {
     return {message: "no request found"};
   }
+  var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: requesterWalletAddress } });
   await new Promise((resolve, reject) => {
     data.map(async(obj, index) => {
-      var issue = await app.model.Issue.findOne({
-        condition: { transactionId: obj.assetId }
-      });
-      var issuer = await app.model.Issuer.findOne({
-        condition: { iid: issue.iid }
-      });
+      var issue = await app.model.Issue.findOne({ condition: { transactionId: obj.assetId } });
+      var dataObj = JSON.parse(issue.data);
+      var issuer = await app.model.Issuer.findOne({ condition: { iid: issue.iid } });
+      data[index].certificateName = dataObj.degree;
       if(owner) {
         data[index].owner = {
           name: owner.name,
@@ -177,8 +171,13 @@ app.route.post("/owner/track/assets/status", async function(req) {
       }
       if(issuer) {
         data[index].issuer = {
-          email: issuer.email
+          email: issuer.email,
+          name: issuer.name
         }
+      }
+      data[index].requester = {
+        email: requesterDetails.email,
+        name: requesterDetails.name
       }
       if(index == data.length-1) {
           resolve();
@@ -186,10 +185,7 @@ app.route.post("/owner/track/assets/status", async function(req) {
     })
   })
 
-  return {
-      message: "Asset list",
-      data: data
-  }
+  return { message: "Asset list", data: data }
 });
 
 function strToBool(s) {

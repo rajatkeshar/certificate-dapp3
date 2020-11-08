@@ -142,17 +142,15 @@ app.route.post("/requester/track/assets/status", async function(req) {
     var requester = await app.model.Requester.findAll({ condition: { requesterWalletAddress: req.query.address } });
     console.log("requester: ", requester);
     if(!requester || requester.length == 0) { return { message: "No details found" } }
+    var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: req.query.address } });
+    console.log("requesterDetails: ", requesterDetails);
     await new Promise((resolve, reject) => {
       requester.map(async(obj, index) => {
-        var issue = await app.model.Issue.findOne({
-          condition: { transactionId: obj.assetId }
-        });
-        var issuer = await app.model.Issuer.findOne({
-          condition: { iid: issue.iid }
-        });
-        var owner = await app.model.Employee.findOne({
-          condition: { empid: issue.empid }
-        });
+        var issue = await app.model.Issue.findOne({ condition: { transactionId: obj.assetId }});
+        var data = JSON.parse(issue.data);
+        var issuer = await app.model.Issuer.findOne({ condition: { iid: issue.iid } });
+        var owner = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
+        requester[index].certificateName = data.degree;
         if(owner) {
           requester[index].owner = {
             name: owner.name,
@@ -162,8 +160,13 @@ app.route.post("/requester/track/assets/status", async function(req) {
         }
         if(issuer) {
           requester[index].issuer = {
-            email: issuer.email
+            email: issuer.email,
+            name: issuer.name
           }
+        }
+        requester[index].requester = {
+          name: requesterDetails.name,
+          email: requesterDetails.email
         }
         if(index == requester.length-1) {
             resolve();

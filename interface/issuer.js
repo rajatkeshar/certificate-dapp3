@@ -64,18 +64,12 @@ function strToBool(s) {
 }
 
 app.route.post("/issuer/track/assets/status", async function(req) {
-  var issuer = await app.model.Issuer.findOne({
-    condition: { email: req.query.email }
-  });
-  if(!issuer) {
-    return {message: "issuer not found"}
-  }
-  var issue = await app.model.Issue.findAll({
-    condition: { iid: issuer.iid }
-  });
+  var issuer = await app.model.Issuer.findOne({ condition: { email: req.query.email } });
+  if(!issuer) { return {message: "issuer not found"} }
+  var issue = await app.model.Issue.findAll({ condition: { iid: issuer.iid } });
 
   await new Promise((resolve, reject) => {
-    data = [];
+    data = [], requesterWalletAddress = null;
     issue.map(async(obj, index) => {
       var requester = await app.model.Requester.findAll({
         condition: {
@@ -87,6 +81,7 @@ app.route.post("/issuer/track/assets/status", async function(req) {
 
       requester.forEach((item, i) => {
         if(item.initBy === "requester" || item.isAuthorizeByIssuer == "true") {
+          requesterWalletAddress = item.requesterWalletAddress;
           data.push(item);
         }
       });
@@ -99,14 +94,13 @@ app.route.post("/issuer/track/assets/status", async function(req) {
   if(!data.length) {
     return {message: "no request found"};
   }
+  var requesterDetails = await app.model.Employee.findOne({ condition: { walletAddress: requesterWalletAddress } });
   await new Promise((resolve, reject) => {
     data.map(async(obj, index) => {
-      var issue = await app.model.Issue.findOne({
-        condition: { transactionId: obj.assetId }
-      });
-      var owner = await app.model.Employee.findOne({
-        condition: { empid: issue.empid }
-      });
+      var issue = await app.model.Issue.findOne({ condition: { transactionId: obj.assetId } });
+      var dataObj = JSON.parse(issue.data);
+      var owner = await app.model.Employee.findOne({ condition: { empid: issue.empid } });
+      data[index].certificateName = dataObj.degree;
       if(owner) {
         data[index].owner = {
           name: owner.name,
@@ -116,8 +110,13 @@ app.route.post("/issuer/track/assets/status", async function(req) {
       }
       if(issuer) {
         data[index].issuer = {
-          email: issuer.email
+          email: issuer.email,
+          name: issuer.name
         }
+      }
+      data[index].requester = {
+        email: requesterDetails.email,
+        name: requesterDetails.name
       }
       if(index == data.length-1) {
           resolve();
@@ -125,10 +124,7 @@ app.route.post("/issuer/track/assets/status", async function(req) {
     })
   })
 
-  return {
-      message: "Asset list",
-      data: data
-  }
+  return { message: "Asset list", data: data }
 });
 
 String.prototype.bool = function() {
