@@ -6,7 +6,8 @@ module.exports = {
       requesterWalletAddress: this.trs.senderId + countryCode,
       assetId: assetId,
       trsId: this.trs.id,
-      initBy: "requester"
+      initBy: "requester",
+      trsTimestamp: new Date().getTime()
     })
   },
   authorizeByIssuer: async function(assetId, countryCode) {

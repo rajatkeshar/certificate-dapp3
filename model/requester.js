@@ -47,13 +47,28 @@ module.exports = {
             length: 255,
         },
         {
+            name: 'trsTimestamp',
+            type: 'Number',
+            length: 255,
+        },
+        {
             name: 'ownerTrsId',
             type: 'String',
             length: 255,
         },
         {
+            name: 'ownerTrsTimestamp',
+            type: 'Number',
+            length: 255,
+        },
+        {
             name: 'issuerTrsId',
             type: 'String',
+            length: 255,
+        },
+        {
+            name: 'issuerTrsTimestamp',
+            type: 'Number',
             length: 255,
         }
     ]

@@ -8,6 +8,7 @@ module.exports = {
         }
     });
     app.sdb.update('Requester', { ownerWalletAddress: this.trs.senderId + countryCode }, {trsId: req.trsId});
+    app.sdb.update('Requester', {ownerTrsTimestamp: new Date().getTime()}, {trsId: req.trsId});
     app.sdb.update('Requester', { ownerStatus: "true" }, {trsId: req.trsId});
     app.sdb.update('Requester', { ownerTrsId: this.trs.id }, {trsId: req.trsId});
   },
@@ -18,9 +19,11 @@ module.exports = {
       requesterWalletAddress: requesterWalletAddress,
       ownerStatus: "true",
       assetId: assetId,
-      ownerTrsId: this.trs.id, 
+      ownerTrsId: this.trs.id,
       trsId: this.trs.id,
-      initBy: "owner"
+      initBy: "owner",
+      trsTimestamp: new Date().getTime(),
+      ownerTrsTimestamp: new Date().getTime()
     })
   }
 }
