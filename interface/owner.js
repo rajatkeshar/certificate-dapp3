@@ -13,10 +13,14 @@ app.route.post("/owner/verifyViewRequest", async function(req){
     console.log("############### calling verify view request: ", req.query)
 
     if(!req.query.countryCode) return { message: "missing params countryCode" };
+    var ownerWalletAddress = address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode;
+
+    var employeeCheck = await app.model.Employee.findOne({ condition: { email: req.query.email }});
+    if(employeeCheck.walletAddress != ownerWalletAddress) return { message: "Invalid secret key"};
 
     var userDetails = await app.model.Employee.findOne({
       condition: {
-          walletAddress: address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode
+          walletAddress: ownerWalletAddress
       }
     });
 
@@ -76,6 +80,10 @@ app.route.post("/owner/grant/asset", async function(req){
 
     if(!req.query.countryCode) return { message: "missing params countryCode" };
     var ownerWalletAddress = address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode.toUpperCase();
+
+    var employeeCheck = await app.model.Employee.findOne({ condition: { email: req.query.email }});
+    if(employeeCheck.walletAddress != ownerWalletAddress) return { message: "Invalid secret key"};
+
     var userDetails = await app.model.Employee.findOne({ condition: { walletAddress: ownerWalletAddress } });
     if(!userDetails) { return { message: "Owner not found" } }
 

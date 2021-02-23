@@ -16,7 +16,9 @@ app.route.post("/requester/viewRequest", async function(req){
     if(!req.query.countryCode) return { message: "missing params countryCode" };
     var requesterWalletAddress = address.generateBase58CheckAddress(util.getPublicKey(req.query.secret)) + req.query.countryCode;
     //try { app.sdb.lock("viewRequest@"+req.query.assetId);} catch(err){ return { message: "Same process in a block" } }
-
+    var employeeCheck = await app.model.Employee.findOne({ condition: { email: req.query.email }});
+    if(employeeCheck.walletAddress != requesterWalletAddress) return { message: "Invalid secret key"};
+    
     var issuedCert = await app.model.Issue.findOne({ condition: { transactionId: req.query.assetId } });
     if(!issuedCert) return { message: "Asset does not exist" }
     issuedCert.data = JSON.parse(issuedCert.data);

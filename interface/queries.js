@@ -72,7 +72,7 @@ app.route.post('/query/authorizers/pendingSigns', async function(req) {
         inputs.push(req.query.department);
     }
 
-    var queryString = `select issues.*, employees.email as receipientEmail, employees.name as receipientName, departments.levels as totalLevels, departments.name as departmentName, issuers.email as issuerEmail from issues join employees on issues.empid = employees.empid join departments on issues.did = departments.did join issuers on issues.iid = issuers.iid join authdepts on authdepts.aid = ? and authdepts.level = issues.authLevel and authdepts.did = issues.did where issues.status = 'pending'${departmentCondition}`;
+    var queryString = `select distinct issues.*, employees.email as receipientEmail, employees.name as receipientName, departments.levels as totalLevels, departments.name as departmentName, issuers.email as issuerEmail from issues join employees on issues.empid = employees.empid join departments on issues.did = departments.did join issuers on issues.iid = issuers.iid join authdepts on authdepts.aid = ? and authdepts.level = issues.authLevel and authdepts.did = issues.did where issues.status = 'pending'${departmentCondition} order by timestampp desc`;
 
     var total = await new Promise((resolve)=>{
         let sql = `select count(*) as total from (${queryString});`
