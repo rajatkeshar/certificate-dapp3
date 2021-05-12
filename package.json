@@ -14,7 +14,7 @@
     "lodash": "^4.17.15",
     "log4js": "^3.0.6",
     "logger": "0.0.1",
-    "nodemailer": "^4.6.8",
+    "nodemailer": "^6.4.16",
     "path": "^0.12.7",
     "request": "^2.88.0",
     "sqlite3": "^4.0.6"
